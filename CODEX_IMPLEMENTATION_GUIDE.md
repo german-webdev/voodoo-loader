@@ -343,14 +343,14 @@ For each issue, capture:
 - Regression checks
 - Prevention rule
 
-Store incidents in `SESSION_CONTEXT.md` under a dedicated incident log section.
+Store incidents in `docs/INCIDENTS.md` (single source for production defects and CI regressions).
 
 ### 11.2 Mandatory release gates
 Before declaring a fix complete:
 - run `ruff`, `mypy`, and `pytest`
 - rebuild portable artifact
 - run a smoke launch of portable `VoodooLoader.exe`
-- document the incident and prevention rule in `SESSION_CONTEXT.md`
+- document the incident and prevention rule in `docs/INCIDENTS.md`
 
 ### 11.3 Known high-risk rules for this project
 - Entry-point modules used by PyInstaller must use absolute imports, not relative imports.
@@ -358,6 +358,9 @@ Before declaring a fix complete:
 - Any packaging/runtime defect must result in at least one new prevention rule in the incident log.
 - Queue row coloring must be palette-aware: never hardcode white default row backgrounds; always set readable foreground when status backgrounds are applied.
 - Sound playback in packaged runtime must resolve resources via multiple frozen-layout candidates and must log media backend errors.
+- Auto-tag/release chain changes must verify both trigger paths:
+  - tag push (`push.tags`)
+  - explicit dispatch (`workflow_dispatch` with tag input)
 
 ## 12. UI overhaul skill gate (2026-03-27)
 
@@ -383,4 +386,3 @@ A task is considered done only when all of the following are true:
 5. Incidents/regressions are documented in project context if the fix addresses a bug.
 
 Build/release must be blocked if a feature/update is not covered by tests.
-

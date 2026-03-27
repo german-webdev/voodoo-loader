@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: auto-tag-master
@@ -22,12 +23,17 @@ jobs:
           fetch-depth: 0
 
       - name: Create next alpha tag
+        id: tagger
         shell: bash
         run: |
           set -euo pipefail
 
-          if git tag --points-at HEAD | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+-alpha$'; then
-            echo "Current commit already has a version tag; skipping."
+          echo "new_tag=" >> "$GITHUB_OUTPUT"
+
+          existing_tag="$(git tag --points-at HEAD | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+-alpha$' | head -n1 || true)"
+          if [[ -n "$existing_tag" ]]; then
+            echo "Current commit already has version tag ${existing_tag}; reusing it."
+            echo "new_tag=${existing_tag}" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -68,6 +74,7 @@ jobs:
             git tag -a "${new_tag}" -m "Voodoo Loader ${new_tag}"
             if git push origin "${new_tag}"; then
               echo "Created and pushed tag: ${new_tag}"
+              echo "new_tag=${new_tag}" >> "$GITHUB_OUTPUT"
               exit 0
             fi
 
@@ -78,3 +85,22 @@ jobs:
 
           echo "Failed to create/push auto tag after retries."
           exit 1
+
+      - name: Trigger build-and-release workflow for tag
+        if: ${{ steps.tagger.outputs.new_tag != '' }}
+        uses: actions/github-script@v7
+        env:
+          NEW_TAG: ${{ steps.tagger.outputs.new_tag }}
+        with:
+          script: |
+            const tag = process.env.NEW_TAG ?? "";
+            core.info(`Dispatching Build Portable Matrix for ${tag}`);
+            await github.request("POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches", {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: "build-portable-matrix.yml",
+              ref: "master",
+              inputs: {
+                tag_name: tag
+              }
+            });

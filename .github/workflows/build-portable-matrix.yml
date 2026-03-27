@@ -2,6 +2,11 @@ name: Build Portable Matrix
 
 on:
   workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "Release tag to build (example: v0.1.4-alpha)"
+        required: false
+        type: string
   push:
     tags:
       - "v*"
@@ -12,9 +17,13 @@ permissions:
 jobs:
   build-windows-x64:
     runs-on: windows-latest
+    env:
+      RELEASE_TAG: ${{ inputs.tag_name != '' && inputs.tag_name || (github.ref_type == 'tag' && github.ref_name || '') }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG != '' && env.RELEASE_TAG || github.ref }}
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -32,9 +41,10 @@ jobs:
       - name: Build portable archive
         shell: pwsh
         env:
-          VOODOO_LOADER_BUILD_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+          VOODOO_LOADER_BUILD_VERSION: ${{ env.RELEASE_TAG }}
         run: |
           powershell -ExecutionPolicy Bypass -File scripts/build_portable.ps1 -PythonExe python -TargetOs windows -TargetArch x64 -PlatformLabel windows
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -43,9 +53,13 @@ jobs:
 
   build-linux-ubuntu-x64:
     runs-on: ubuntu-22.04
+    env:
+      RELEASE_TAG: ${{ inputs.tag_name != '' && inputs.tag_name || (github.ref_type == 'tag' && github.ref_name || '') }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG != '' && env.RELEASE_TAG || github.ref }}
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -75,10 +89,11 @@ jobs:
 
       - name: Build portable archive
         env:
-          VOODOO_LOADER_BUILD_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+          VOODOO_LOADER_BUILD_VERSION: ${{ env.RELEASE_TAG }}
         run: |
           chmod +x scripts/build_portable.sh
           ./scripts/build_portable.sh --python python --target-arch x64 --platform-label linux-ubuntu-22.04
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -86,11 +101,13 @@ jobs:
           path: dist/portable/VoodooLoader-v*-linux-ubuntu-22.04-x64-portable.tar.gz
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && startsWith(inputs.tag_name, 'v')) }}
     needs:
       - build-windows-x64
       - build-linux-ubuntu-x64
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ inputs.tag_name != '' && inputs.tag_name || github.ref_name }}
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -101,7 +118,7 @@ jobs:
       - name: Detect prerelease
         id: prerelease
         run: |
-          if [[ "${GITHUB_REF_NAME}" == *-* ]]; then
+          if [[ "${RELEASE_TAG}" == *-* ]]; then
             echo "value=true" >> "$GITHUB_OUTPUT"
           else
             echo "value=false" >> "$GITHUB_OUTPUT"
@@ -110,7 +127,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
+          tag_name: ${{ env.RELEASE_TAG }}
           files: dist/release-assets/*
           prerelease: ${{ steps.prerelease.outputs.value == 'true' }}
           generate_release_notes: true
