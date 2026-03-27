@@ -31,4 +31,5 @@ Constraints:
 22. Queue drag-and-drop data integrity fix (no row loss, stable selection, stable naming) (`done`)
 23. Recovered accidental `main_window.py` truncation and restored implementation parity (`done`)
 24. Queue drag'n'drop stability hardening: CopyAction DnD + model-safe reorder (`done`)
+25. Add drag'n'drop regression tests (row-loss guard + MIME row decode/encode checks) (`done`)
 

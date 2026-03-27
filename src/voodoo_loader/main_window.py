@@ -3,8 +3,8 @@ from __future__ import annotations
 import uuid
 from pathlib import Path
 
-from PySide6.QtCore import QByteArray, QUrl, Qt, Signal
-from PySide6.QtGui import QAction, QBrush, QColor, QDesktopServices, QKeySequence, QShortcut
+from PySide6.QtCore import QByteArray, QMimeData, QUrl, Qt, Signal
+from PySide6.QtGui import QAction, QBrush, QColor, QCursor, QDesktopServices, QDrag, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -75,20 +75,75 @@ PRIORITY_ORDER = {
 
 class QueueTableWidget(QTableWidget):
     rows_dropped = Signal(list, int)
+    DRAG_ROWS_MIME = "application/x-voodoo-loader-rows"
+
+    @staticmethod
+    def _encode_rows(rows: list[int]) -> QByteArray:
+        return QByteArray(",".join(str(row) for row in rows).encode("utf-8"))
+
+    @staticmethod
+    def _decode_rows(data: QByteArray) -> list[int]:
+        raw = bytes(data).decode("utf-8").strip()
+        if not raw:
+            return []
+        rows: list[int] = []
+        for part in raw.split(","):
+            part = part.strip()
+            if not part:
+                continue
+            try:
+                rows.append(int(part))
+            except ValueError:
+                continue
+        return sorted(set(rows))
+
+    def _drag_rows(self) -> list[int]:
+        rows = sorted(index.row() for index in self.selectionModel().selectedRows())
+        if rows:
+            return rows
+
+        current = self.currentRow()
+        if current >= 0:
+            return [current]
+
+        pos = self.viewport().mapFromGlobal(QCursor.pos())
+        hovered = self.rowAt(pos.y())
+        if hovered >= 0:
+            return [hovered]
+
+        return []
+
+    def startDrag(self, _supported_actions) -> None:  # noqa: N802
+        rows = self._drag_rows()
+        if not rows:
+            return
+
+        mime = QMimeData()
+        mime.setData(self.DRAG_ROWS_MIME, self._encode_rows(rows))
+
+        drag = QDrag(self)
+        drag.setMimeData(mime)
+        drag.exec(Qt.DropAction.MoveAction)
+
+    def dragEnterEvent(self, event) -> None:  # noqa: N802
+        if event.source() is self and event.mimeData().hasFormat(self.DRAG_ROWS_MIME):
+            event.acceptProposedAction()
+            return
+        super().dragEnterEvent(event)
 
     def dragMoveEvent(self, event) -> None:  # noqa: N802
-        if event.source() is self:
+        if event.source() is self and event.mimeData().hasFormat(self.DRAG_ROWS_MIME):
             event.acceptProposedAction()
             return
         super().dragMoveEvent(event)
 
     def dropEvent(self, event) -> None:  # noqa: N802
-        if event.source() is not self:
+        if event.source() is not self or not event.mimeData().hasFormat(self.DRAG_ROWS_MIME):
             super().dropEvent(event)
             return
 
-        selected_rows = sorted({index.row() for index in self.selectedIndexes()})
-        if not selected_rows:
+        rows = self._decode_rows(event.mimeData().data(self.DRAG_ROWS_MIME))
+        if not rows:
             event.ignore()
             return
 
@@ -96,7 +151,7 @@ class QueueTableWidget(QTableWidget):
         if target_row < 0:
             target_row = self.rowCount()
 
-        self.rows_dropped.emit(selected_rows, target_row)
+        self.rows_dropped.emit(rows, target_row)
         event.acceptProposedAction()
 
 
@@ -171,9 +226,10 @@ class MainWindow(QMainWindow):
         self.queue_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.queue_table.horizontalHeader().setStretchLastSection(True)
         self.queue_table.setColumnHidden(COL_ID, True)
-        self.queue_table.setDragDropMode(QTableWidget.DragDropMode.InternalMove)
+        self.queue_table.setDragDropMode(QTableWidget.DragDropMode.DragDrop)
         self.queue_table.setDragEnabled(True)
         self.queue_table.viewport().setAcceptDrops(True)
+        self.queue_table.setAcceptDrops(True)
         self.queue_table.setDropIndicatorShown(True)
         self.queue_table.setDefaultDropAction(Qt.DropAction.MoveAction)
         self.queue_table.setDragDropOverwriteMode(False)
