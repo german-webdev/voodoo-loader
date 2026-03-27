@@ -30,4 +30,5 @@ Constraints:
 21. Progress accordion: Less/More details visibility (`done`)
 22. Queue drag-and-drop data integrity fix (no row loss, stable selection, stable naming) (`done`)
 23. Recovered accidental `main_window.py` truncation and restored implementation parity (`done`)
+24. Queue drag'n'drop stability hardening: CopyAction DnD + model-safe reorder (`done`)
 
