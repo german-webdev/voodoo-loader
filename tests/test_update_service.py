@@ -29,7 +29,7 @@ def test_check_for_updates_picks_latest_release(monkeypatch) -> None:
             "draft": False,
             "assets": [
                 {
-                    "name": "VoodooLoader-portable.zip",
+                    "name": "VoodooLoader-v0.1.0-alpha-windows-x64-portable.zip",
                     "browser_download_url": "https://example.com/portable-alpha.zip",
                 }
             ],
@@ -41,7 +41,7 @@ def test_check_for_updates_picks_latest_release(monkeypatch) -> None:
             "draft": False,
             "assets": [
                 {
-                    "name": "VoodooLoader-portable.zip",
+                    "name": "VoodooLoader-v0.2.0-windows-x64-portable.zip",
                     "browser_download_url": "https://example.com/portable-stable.zip",
                 }
             ],
@@ -49,6 +49,7 @@ def test_check_for_updates_picks_latest_release(monkeypatch) -> None:
     ]
 
     monkeypatch.setattr(UpdateService, "_request_json", staticmethod(lambda _url, _timeout: payload))
+    monkeypatch.setattr(UpdateService, "runtime_target", staticmethod(lambda: ("windows", "x64")))
 
     result = service.check_for_updates(current_version="0.1.0", repository="owner/repo")
 
@@ -81,20 +82,38 @@ def test_check_for_updates_reports_no_update_when_current_latest(monkeypatch) ->
     assert result.latest_version == "0.1.0"
 
 
-def test_pick_asset_prefers_portable_zip() -> None:
+def test_pick_asset_prefers_platform_and_arch() -> None:
     assets = [
         {
-            "name": "VoodooLoader.zip",
-            "browser_download_url": "https://example.com/default.zip",
+            "name": "VoodooLoader-v0.2.0-linux-ubuntu-22.04-x64-portable.tar.gz",
+            "browser_download_url": "https://example.com/linux.tar.gz",
         },
         {
-            "name": "VoodooLoader-portable.zip",
-            "browser_download_url": "https://example.com/portable.zip",
+            "name": "VoodooLoader-v0.2.0-windows-x64-portable.zip",
+            "browser_download_url": "https://example.com/windows.zip",
         },
     ]
 
-    name, url, checksum = UpdateService._pick_asset_urls(assets)
+    name, url, checksum = UpdateService._pick_asset_urls(assets, target_os="windows", target_arch="x64")
 
-    assert name == "VoodooLoader-portable.zip"
-    assert url == "https://example.com/portable.zip"
+    assert name.endswith("windows-x64-portable.zip")
+    assert url == "https://example.com/windows.zip"
     assert checksum == ""
+
+
+def test_pick_asset_prefers_linux_tarball_for_linux_target() -> None:
+    assets = [
+        {
+            "name": "VoodooLoader-v0.2.0-linux-ubuntu-22.04-x64-portable.tar.gz",
+            "browser_download_url": "https://example.com/linux.tar.gz",
+        },
+        {
+            "name": "VoodooLoader-v0.2.0-windows-x64-portable.zip",
+            "browser_download_url": "https://example.com/windows.zip",
+        },
+    ]
+
+    name, url, _checksum = UpdateService._pick_asset_urls(assets, target_os="linux", target_arch="x64")
+
+    assert name.endswith("linux-ubuntu-22.04-x64-portable.tar.gz")
+    assert url == "https://example.com/linux.tar.gz"

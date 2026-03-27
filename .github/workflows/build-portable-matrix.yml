@@ -1,0 +1,99 @@
+name: Build Portable Matrix
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows-x64:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          architecture: "x64"
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pyinstaller
+
+      - name: Build portable archive
+        shell: pwsh
+        run: |
+          powershell -ExecutionPolicy Bypass -File scripts/build_portable.ps1 -PythonExe python -TargetOs windows -TargetArch x64 -PlatformLabel windows
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: voodoo-loader-windows-x64
+          path: dist/portable/VoodooLoader-v*-windows-x64-portable.zip
+
+  build-linux-ubuntu-x64:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pyinstaller
+
+      - name: Build portable archive
+        run: |
+          chmod +x scripts/build_portable.sh
+          ./scripts/build_portable.sh --python python --target-arch x64 --platform-label linux-ubuntu-22.04
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: voodoo-loader-linux-ubuntu-x64
+          path: dist/portable/VoodooLoader-v*-linux-ubuntu-22.04-x64-portable.tar.gz
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs:
+      - build-windows-x64
+      - build-linux-ubuntu-x64
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/release-assets
+          merge-multiple: true
+
+      - name: Detect prerelease
+        id: prerelease
+        run: |
+          if [[ "${GITHUB_REF_NAME}" == *-* ]]; then
+            echo "value=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: dist/release-assets/*
+          prerelease: ${{ steps.prerelease.outputs.value == 'true' }}
+          generate_release_notes: true

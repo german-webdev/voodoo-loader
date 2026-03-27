@@ -10,7 +10,7 @@ if exist ".venv312\Scripts\python.exe" (
   set PYEXE=python
 )
 
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts\build_portable.ps1 -PythonExe "%PYEXE%"
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\build_portable.ps1 -PythonExe "%PYEXE%" %*
 if errorlevel 1 exit /b 1
 
 echo Portable build completed.

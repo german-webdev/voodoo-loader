@@ -141,6 +141,7 @@ class LocalizationService:
                 "update_prepare_failed": "Failed to prepare update installation.",
                 "update_restart_prompt": "Update is ready. The app will close and restart automatically.",
                 "update_dev_mode": "Auto-update works only in portable/release executable mode.",
+                "update_apply_platform_unsupported": "Automatic update apply is currently supported only on Windows. Open release page and update manually.",
                 "update_running_blocked": "Stop active downloads before updating.",
                 "update_open_release": "Open release page",
                 "update_release_no_asset": "Release found, but no downloadable asset is attached.",
@@ -299,3 +300,5 @@ class LocalizationService:
             except Exception:
                 return value
         return value
+
+

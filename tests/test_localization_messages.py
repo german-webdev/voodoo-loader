@@ -44,6 +44,7 @@ def test_bulk_operation_messages_exist_in_en_and_ru() -> None:
         "update_latest_message",
         "update_available_message",
         "update_repo_not_configured",
+        "update_apply_platform_unsupported",
     ]
 
     for language in ("en", "ru"):

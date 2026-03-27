@@ -1,4 +1,4 @@
-﻿# Voodoo Loader
+# Voodoo Loader
 
 Voodoo Loader is a modular desktop downloader for Windows built on top of `aria2c`.
 
@@ -75,8 +75,17 @@ scripts\build_portable.bat
 ```
 
 Output artifacts:
-- `dist\portable\VoodooLoader\VoodooLoader.exe`
-- `dist\portable\VoodooLoader-portable.zip`
+- dist\\portable\\VoodooLoader\\VoodooLoader.exe (Windows local build)
+- dist\\portable\\VoodooLoader-v<version>-windows-x64-portable.zip (Windows)
+- dist/portable/VoodooLoader-v<version>-linux-ubuntu-22.04-x64-portable.tar.gz (Linux CI)
+
+GitHub Actions workflow:
+- .github/workflows/build-portable-matrix.yml builds portable archives for:
+  - Windows x64
+  - Linux Ubuntu x64
+
+Note on Windows x86:
+- Current stack uses PySide6/Qt6; official Qt6 Windows support targets x64/ARM64 and does not provide x86 binaries, so win-x86 build is deferred unless UI stack is migrated.
 
 Security note:
 - Token/username are stored in local settings only when `Remember token` / `Remember username` is enabled.

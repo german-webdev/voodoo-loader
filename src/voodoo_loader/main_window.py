@@ -2049,6 +2049,12 @@ class MainWindow(QMainWindow):
                 QDesktopServices.openUrl(QUrl(release.release_url))
             return
 
+        if not sys.platform.startswith('win'):
+            QMessageBox.information(self, self.t('update_title'), self.t('update_apply_platform_unsupported'))
+            if release.release_url:
+                QDesktopServices.openUrl(QUrl(release.release_url))
+            return
+
         if not release.asset_url:
             response = QMessageBox.question(
                 self,
@@ -2292,6 +2298,7 @@ class MainWindow(QMainWindow):
         if m:
             return f"{m}m {s}s"
         return f"{s}s"
+
 
 
 
