@@ -609,6 +609,9 @@ This program is mandatory and tracked in `UPGRADE_LIST.md`.
 - After applying update, app attempts automatic relaunch via external updater process.
 - Updater process must relaunch with explicit working directory and retry policy.
 - User notification must include manual fallback instruction if auto-restart does not occur.
+- Updater must support both archive layouts: flat bundle contents and nested top-level folder.
+- Updater must resolve launch executable via fallback candidate paths when layout changes after extraction.
+- Updater failures must be written to a persistent updater log (`voodoo_loader_updater.log`).
 
 ### 19.5 Regression coverage
 - Mandatory tests for update reliability include:
@@ -616,6 +619,8 @@ This program is mandatory and tracked in `UPGRADE_LIST.md`.
   - updater launcher script generation and relaunch command expectations
 ### 19.6 Progress bar visual specification
 - Main progress bar must not render as a thin 1-2 px line.
-- Required height: `10px` (acceptable range 8-10 px).
+- Required height: `15px` (acceptable range 12-15 px).
 - Progress chunk/fill color: `#00BB0A`.
 - Same style should be reused for update busy loader progress to keep visual consistency.
+- Unfilled progress track color: `#ACAFB5`.
+- Main progress bar must show numeric percent text (`%`).

@@ -92,6 +92,13 @@ mkdir -p "$DIST_PATH" "$WORK_PATH"
 
 $PYTHON_EXE -m PyInstaller --noconfirm --clean --distpath "$DIST_PATH" --workpath "$WORK_PATH" "$SPEC_PATH"
 
+if [[ -f "$DIST_PATH/VoodooLoader" ]]; then
+  rm -f "$DIST_PATH/VoodooLoader"
+fi
+if [[ -f "$DIST_PATH/VoodooLoader-bin" ]]; then
+  rm -f "$DIST_PATH/VoodooLoader-bin"
+fi
+
 BUNDLE_PATH="$DIST_PATH/VoodooLoader"
 if [[ -f "$BUNDLE_PATH/VoodooLoader" ]]; then
   BINARY_PATH="$BUNDLE_PATH/VoodooLoader"

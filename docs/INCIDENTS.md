@@ -1,5 +1,33 @@
 # Incident Log
 
+## 2026-03-28 - Update applied but app stayed on old version and did not relaunch
+
+### Symptoms
+- App detected newer release correctly, but after update flow and restart the version stayed old.
+- Auto-restart after update sometimes did not happen (app closed only).
+- Busy update modal rendered as blank/white in some environments.
+
+### Root causes
+1. Updater relied on direct archive extraction into install folder without handling nested top-level folders in release archives.
+2. Relaunch path resolution was too strict (`$ExePath` only), so restart could fail after extraction layout changes.
+3. Busy update modal had insufficient explicit styling, causing unreadable/blank appearance on some themes.
+
+### Fixes
+- Reworked updater script to:
+  - extract into temporary `unpacked` directory
+  - normalize source root (flat or nested archive layout)
+  - copy files into install dir explicitly
+  - resolve launch path via multiple candidates
+  - write failure details to `voodoo_loader_updater.log` and continue with cleanup
+- Added forced parent-process stop fallback after wait timeout.
+- Added hidden/no-profile PowerShell updater launch flags.
+- Restored visible percent text in main progress bar and set empty-track color to `#ACAFB5`.
+- Styled update busy modal explicitly for dark UI readability.
+
+### Prevention
+- Any updater logic change must include regression assertions for script generation (extract/copy/relaunch/error log paths).
+- Progress-bar visual changes must be covered by style-constant tests and checked in packaged build smoke-test.
+
 ## 2026-03-28 - Auto-tag created but build/release chain did not start
 
 ### Symptoms

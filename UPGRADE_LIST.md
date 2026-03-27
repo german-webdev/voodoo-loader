@@ -48,5 +48,7 @@ Constraints:
 35. Update UX fix: replace blank progress modal with explicit loader dialogs for check/download/apply (done)
 36. Update relaunch hardening: updater working directory + retry loop + manual fallback message (done)
 37. Add regression tests for update launcher and runtime version resolution (done)
-38. Progress bar visual refresh: height 10px + chunk color #00BB0A (done)
+38. Progress bar visual refresh: height 15px + chunk color #00BB0A (done)
 39. CI auto-release hardening: auto-tag -> explicit build/release dispatch by tag (done)
+40. Update apply/relaunch hardening + progress UX regression fix (done)
+41. Increase progress bar height to 15px for readable percent text (done)

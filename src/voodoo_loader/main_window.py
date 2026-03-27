@@ -78,13 +78,16 @@ PRIORITY_ORDER = {
 }
 
 
-GLOBAL_PROGRESS_HEIGHT_PX = 10
+GLOBAL_PROGRESS_HEIGHT_PX = 15
 GLOBAL_PROGRESS_CHUNK_COLOR = "#00BB0A"
+GLOBAL_PROGRESS_BASE_COLOR = "#ACAFB5"
 GLOBAL_PROGRESS_STYLESHEET = (
     "QProgressBar {"
     " border: 1px solid #333333;"
     " border-radius: 5px;"
-    " background-color: #1f1f1f;"
+    " background-color: #ACAFB5;"
+    " color: #1a1a1a;"
+    " text-align: center;"
     " }"
     " QProgressBar::chunk {"
     " background-color: #00BB0A;"
@@ -369,7 +372,8 @@ class MainWindow(QMainWindow):
         self.global_progress.setRange(0, 100)
         self.global_progress.setValue(0)
         self.global_progress.setFixedHeight(GLOBAL_PROGRESS_HEIGHT_PX)
-        self.global_progress.setTextVisible(False)
+        self.global_progress.setTextVisible(True)
+        self.global_progress.setFormat("%p%")
         self.global_progress.setStyleSheet(GLOBAL_PROGRESS_STYLESHEET)
         progress_layout.addWidget(self.global_progress)
         self.progress_details_widget = QWidget(progress_box)
@@ -2004,7 +2008,12 @@ class MainWindow(QMainWindow):
         dialog.setWindowModality(Qt.WindowModality.ApplicationModal)
         dialog.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
         dialog.setWindowFlag(Qt.WindowType.WindowCloseButtonHint, False)
-        dialog.setMinimumWidth(360)
+        dialog.setMinimumWidth(380)
+        dialog.setMinimumHeight(120)
+        dialog.setStyleSheet(
+            "QDialog { background-color: #1f1f1f; color: #f1f1f1; }"
+            "QLabel { color: #f1f1f1; font-size: 13px; }"
+        )
 
         layout = QVBoxLayout(dialog)
         layout.setContentsMargins(16, 16, 16, 16)
@@ -2012,6 +2021,7 @@ class MainWindow(QMainWindow):
 
         label = QLabel(message, dialog)
         label.setWordWrap(True)
+        label.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter)
 
         progress = QProgressBar(dialog)
         progress.setRange(0, 0)
@@ -2023,6 +2033,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(progress)
 
         dialog.show()
+        dialog.repaint()
         QApplication.processEvents()
         return dialog
 

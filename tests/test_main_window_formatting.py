@@ -1,4 +1,7 @@
+from pathlib import Path
+
 from voodoo_loader.main_window import (
+    GLOBAL_PROGRESS_BASE_COLOR,
     GLOBAL_PROGRESS_CHUNK_COLOR,
     GLOBAL_PROGRESS_HEIGHT_PX,
     GLOBAL_PROGRESS_STYLESHEET,
@@ -20,6 +23,13 @@ def test_format_bytes_mib_and_gib() -> None:
 
 
 def test_global_progress_style_constants() -> None:
-    assert GLOBAL_PROGRESS_HEIGHT_PX == 10
+    assert GLOBAL_PROGRESS_HEIGHT_PX == 15
     assert GLOBAL_PROGRESS_CHUNK_COLOR == "#00BB0A"
+    assert GLOBAL_PROGRESS_BASE_COLOR == "#ACAFB5"
     assert "background-color: #00BB0A;" in GLOBAL_PROGRESS_STYLESHEET
+    assert "background-color: #ACAFB5;" in GLOBAL_PROGRESS_STYLESHEET
+
+def test_global_progress_percentage_text_is_enabled() -> None:
+    source = Path('src/voodoo_loader/main_window.py').read_text(encoding='utf-8')
+    assert 'self.global_progress.setTextVisible(True)' in source
+    assert 'self.global_progress.setFormat("%p%")' in source

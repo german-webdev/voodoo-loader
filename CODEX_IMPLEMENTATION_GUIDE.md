@@ -361,6 +361,7 @@ Before declaring a fix complete:
 - Auto-tag/release chain changes must verify both trigger paths:
   - tag push (`push.tags`)
   - explicit dispatch (`workflow_dispatch` with tag input)
+- Updater scripts must support both flat and nested archive layouts and must emit persistent failure logs for relaunch diagnostics.
 
 ## 12. UI overhaul skill gate (2026-03-27)
 

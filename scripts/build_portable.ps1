@@ -58,6 +58,11 @@ New-Item -ItemType Directory -Path $workPath -Force | Out-Null
 
 & $PythonExe -m PyInstaller --noconfirm --clean --distpath $distPath --workpath $workPath $specPath
 
+$standaloneExe = Join-Path $distPath "VoodooLoader.exe"
+if (Test-Path $standaloneExe) {
+    Remove-Item $standaloneExe -Force -ErrorAction SilentlyContinue
+}
+
 $bundlePath = Join-Path $distPath "VoodooLoader"
 $exeName = "VoodooLoader.exe"
 if ($TargetOs -ne "windows") {
