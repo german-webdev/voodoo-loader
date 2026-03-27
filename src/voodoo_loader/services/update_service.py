@@ -415,6 +415,10 @@ class UpdateService:
             encoding="utf-8",
         )
 
+        create_new_process_group = int(getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0x00000200))
+        detached_process = int(getattr(subprocess, "DETACHED_PROCESS", 0x00000008))
+        creation_flags = create_new_process_group | detached_process
+
         subprocess.Popen(
             [
                 "powershell",
@@ -431,6 +435,6 @@ class UpdateService:
                 "-ParentPid",
                 str(parent_pid),
             ],
-            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,
+            creationflags=creation_flags,
             close_fds=True,
         )
