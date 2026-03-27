@@ -391,8 +391,14 @@ class UpdateService:
         return destination, expected_hash
 
     @staticmethod
-    def launch_windows_updater(zip_path: Path, install_dir: Path, exe_path: Path, parent_pid: int) -> None:
-        script_path = zip_path.parent / "voodoo_loader_apply_update.ps1"
+    def launch_windows_updater(zip_path: Path, install_dir: Path, exe_path: Path, parent_pid: int) -> Path:
+        script_path = install_dir / "voodoo_loader_apply_update.ps1"
+        ready_marker = install_dir / "voodoo_loader_updater.ready"
+        install_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            ready_marker.unlink(missing_ok=True)
+        except Exception:
+            pass
         script_path.write_text(
             "\n".join(
                 [
@@ -404,6 +410,7 @@ class UpdateService:
                     ")",
                     "$ErrorActionPreference = 'Stop'",
                     "$updaterLog = Join-Path $InstallDir 'voodoo_loader_updater.log'",
+                    "$readyMarker = Join-Path $InstallDir 'voodoo_loader_updater.ready'",
                     "function Write-Log([string]$Message) {",
                     "  $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'",
                     "  Add-Content -LiteralPath $updaterLog -Value \"[$timestamp] $Message\"",
@@ -423,7 +430,9 @@ class UpdateService:
                     "  }",
                     "  return ''",
                     "}",
+                    "Remove-Item -LiteralPath $readyMarker -Force -ErrorAction SilentlyContinue",
                     "Write-Log 'Updater started'",
+                    "Set-Content -LiteralPath $readyMarker -Value (Get-Date -Format o) -Encoding UTF8 -Force",
                     "try {",
                     "  for ($i = 0; $i -lt 240; $i++) {",
                     "    if (-not (Get-Process -Id $ParentPid -ErrorAction SilentlyContinue)) { break }",
@@ -448,17 +457,41 @@ class UpdateService:
                     "    $sourceRoot = $children[0].FullName",
                     "  }",
                     "",
+                    "  $targetRuntimeDir = Join-Path $InstallDir '_internal'",
+                    "  if (Test-Path -LiteralPath $targetRuntimeDir) {",
+                    "    Write-Log ('Removing previous runtime directory: ' + $targetRuntimeDir)",
+                    "    Remove-Item -LiteralPath $targetRuntimeDir -Recurse -Force -ErrorAction SilentlyContinue",
+                    "  }",
+                    "  $targetExePath = Join-Path $InstallDir 'VoodooLoader.exe'",
+                    "  if (Test-Path -LiteralPath $targetExePath) {",
+                    "    Write-Log ('Removing previous executable: ' + $targetExePath)",
+                    "    Remove-Item -LiteralPath $targetExePath -Force -ErrorAction SilentlyContinue",
+                    "  }",
+                    "",
                     "  Write-Log ('Copying updated files from: ' + $sourceRoot)",
                     "  $copyProc = Start-Process -FilePath 'robocopy.exe' -ArgumentList @($sourceRoot, $InstallDir, '/E', '/R:5', '/W:1', '/NFL', '/NDL', '/NJH', '/NJS', '/NP') -Wait -PassThru",
+                    "  Write-Log ('Robocopy exit code: ' + $copyProc.ExitCode)",
                     "  if ($copyProc.ExitCode -gt 7) {",
                     "    throw ('Robocopy failed with exit code ' + $copyProc.ExitCode)",
                     "  }",
                     "",
-                    "  $launchPath = Resolve-LaunchPath -InstallDir $InstallDir -ExePath $ExePath -ExtractRoot $extractRoot",
+                    "  $sourceExePath = Resolve-LaunchPath -InstallDir $sourceRoot -ExePath '' -ExtractRoot $sourceRoot",
+                    "  if (-not $sourceExePath) {",
+                    "    throw 'Could not resolve source executable in extracted update package'",
+                    "  }",
+                    "",
+                    "  $launchPath = Resolve-LaunchPath -InstallDir $InstallDir -ExePath $ExePath -ExtractRoot $InstallDir",
                     "  if (-not $launchPath) {",
                     "    throw 'Updated executable path was not found after applying update'",
                     "  }",
                     "",
+                    "  $sourceExeSize = (Get-Item -LiteralPath $sourceExePath).Length",
+                    "  $targetExeSize = (Get-Item -LiteralPath $launchPath).Length",
+                    "  if ($sourceExeSize -ne $targetExeSize) {",
+                    "    throw ('Executable size mismatch after copy: source=' + $sourceExeSize + ', target=' + $targetExeSize)",
+                    "  }",
+                    "",
+                    "  Start-Sleep -Milliseconds 300",
                     "  $workingDir = Split-Path -Parent $launchPath",
                     "  $started = $false",
                     "  for ($i = 0; $i -lt 8; $i++) {",
@@ -480,7 +513,6 @@ class UpdateService:
                     "} finally {",
                     "  Remove-Item -LiteralPath $ZipPath -Force -ErrorAction SilentlyContinue",
                     "  Remove-Item -LiteralPath (Join-Path (Split-Path -Parent $ZipPath) 'unpacked') -Recurse -Force -ErrorAction SilentlyContinue",
-                    "  Remove-Item -LiteralPath $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue",
                     "}",
                 ]
             ),
@@ -488,8 +520,7 @@ class UpdateService:
         )
 
         create_new_process_group = int(getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0x00000200))
-        detached_process = int(getattr(subprocess, "DETACHED_PROCESS", 0x00000008))
-        creation_flags = create_new_process_group | detached_process
+        creation_flags = create_new_process_group
 
         windows_powershell = Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32" / "WindowsPowerShell" / "v1.0" / "powershell.exe"
         powershell_exe = str(windows_powershell) if windows_powershell.is_file() else (shutil.which("powershell") or shutil.which("pwsh"))
@@ -522,6 +553,8 @@ class UpdateService:
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
+
+        return ready_marker
 
 
 

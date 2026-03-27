@@ -7,14 +7,34 @@ $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 Set-Location $root
 
-if ([string]::IsNullOrWhiteSpace($PythonExe)) {
-    if (Test-Path '.\\.venv312\\Scripts\\python.exe') {
-        $PythonExe = '.\\.venv312\\Scripts\\python.exe'
-    } elseif (Test-Path '.\\.venv\\Scripts\\python.exe') {
-        $PythonExe = '.\\.venv\\Scripts\\python.exe'
-    } else {
-        $PythonExe = 'python'
+function Test-PythonExe([string]$Candidate) {
+    if ([string]::IsNullOrWhiteSpace($Candidate)) { return $false }
+    try {
+        & $Candidate -V *> $null
+        return ($LASTEXITCODE -eq 0)
+    } catch {
+        return $false
     }
+}
+
+if ([string]::IsNullOrWhiteSpace($PythonExe)) {
+    $candidates = @(
+        '.\\.venv312\\Scripts\\python.exe',
+        '.\\.venv\\Scripts\\python.exe',
+        'python'
+    )
+
+    foreach ($candidate in $candidates) {
+        if (Test-PythonExe $candidate) {
+            $PythonExe = $candidate
+            break
+        }
+    }
+}
+
+if (-not (Test-PythonExe $PythonExe)) {
+    Write-Error "[qa] Unable to find a working Python interpreter."
+    exit 1
 }
 
 $env:PYTHONPATH = Join-Path $root 'src'

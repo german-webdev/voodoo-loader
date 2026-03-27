@@ -599,6 +599,7 @@ This program is mandatory and tracked in `UPGRADE_LIST.md`.
   2. latest git tag (`v*`)
   3. package runtime version fallback
 - Build output must always include `voodoo_loader_version.txt` in portable bundle root.
+- Portable build scripts must fail fast on any non-zero packager exit code (no stale artifact reuse).
 
 ### 19.3 Update UX requirements
 - Update check and update apply stages must use a blocking modal with visible loader/progress indicator and status text.
@@ -612,11 +613,15 @@ This program is mandatory and tracked in `UPGRADE_LIST.md`.
 - Updater must support both archive layouts: flat bundle contents and nested top-level folder.
 - Updater must resolve launch executable via fallback candidate paths when layout changes after extraction.
 - Updater failures must be written to a persistent updater log (`voodoo_loader_updater.log`).
+- Updater must purge previous runtime artifacts (`_internal` and previous app executable) before copying new binaries.
+- Updater startup handshake must clear stale ready markers before launch.
+- Startup readiness validation must accept marker and/or updater log startup signal, with timeout >= 10s.
 
 ### 19.5 Regression coverage
 - Mandatory tests for update reliability include:
   - runtime version resolution (env/frozen file/default)
   - updater launcher script generation and relaunch command expectations
+  - stale-marker cleanup and startup-launch command contract validation
 ### 19.6 Progress bar visual specification
 - Main progress bar must not render as a thin 1-2 px line.
 - Required height: `15px` (acceptable range 12-15 px).

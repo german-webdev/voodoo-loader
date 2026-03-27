@@ -130,17 +130,29 @@ def test_default_repository_is_configured() -> None:
 
 
 def test_launch_windows_updater_generates_relaunch_script(monkeypatch) -> None:
-    zip_path = Path("C:/temp/update.zip")
-    install_dir = Path("C:/temp/portable")
+    root = Path("build/test-update-service")
+    if root.exists():
+        import shutil
+        shutil.rmtree(root)
+    root.mkdir(parents=True, exist_ok=True)
+
+    zip_path = root / "update.zip"
+    zip_path.write_bytes(b"PK")
+    install_dir = root / "portable"
+    install_dir.mkdir()
     exe_path = install_dir / "VoodooLoader.exe"
 
+    stale_ready_marker = install_dir / "voodoo_loader_updater.ready"
+    stale_ready_marker.write_text("stale", encoding="utf-8")
+
     written: dict[str, object] = {}
+    original_write_text = Path.write_text
 
     def fake_write_text(self: Path, text: str, encoding: str = "utf-8") -> int:
         written["path"] = self
         written["text"] = text
         written["encoding"] = encoding
-        return len(text)
+        return original_write_text(self, text, encoding=encoding)
 
     captured: dict[str, object] = {}
 
@@ -149,24 +161,38 @@ def test_launch_windows_updater_generates_relaunch_script(monkeypatch) -> None:
         captured["kwargs"] = kwargs
         return SimpleNamespace()
 
+    monkeypatch.setenv("SystemRoot", str(root / "missing-system-root"))
+    monkeypatch.setattr(update_module.shutil, "which", lambda name: "powershell.exe" if name in {"powershell", "pwsh"} else None)
     monkeypatch.setattr(Path, "write_text", fake_write_text)
     monkeypatch.setattr(update_module.subprocess, "Popen", fake_popen)
 
-    UpdateService.launch_windows_updater(
+    ready_marker = UpdateService.launch_windows_updater(
         zip_path=zip_path,
         install_dir=install_dir,
         exe_path=exe_path,
         parent_pid=12345,
     )
 
-    assert written.get("path") == zip_path.parent / "voodoo_loader_apply_update.ps1"
+    assert written.get("path") == install_dir / "voodoo_loader_apply_update.ps1"
+    assert ready_marker == install_dir / "voodoo_loader_updater.ready"
+    assert stale_ready_marker.exists() is False
+
     script_text = str(written.get("text", ""))
     assert "Start-Process -FilePath $launchPath -WorkingDirectory $workingDir" in script_text
     assert "Write-Log 'Updater started'" in script_text
+    assert "Set-Content -LiteralPath $readyMarker" in script_text
     assert "Resolve-LaunchPath" in script_text
     assert "robocopy.exe" in script_text
+    assert "Removing previous runtime directory" in script_text
+    assert "Removing previous executable" in script_text
+    assert "Robocopy exit code" in script_text
     assert "Robocopy failed with exit code" in script_text
+    assert "Executable size mismatch after copy" in script_text
     assert "Write-Log ('Updater failed: ' + $_.Exception.Message)" in script_text
+
+    command = captured.get("command")
+    assert isinstance(command, list)
+    assert command[0] == "powershell.exe"
 
     kwargs = captured.get("kwargs")
     assert isinstance(kwargs, dict)

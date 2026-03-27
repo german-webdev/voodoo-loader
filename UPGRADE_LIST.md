@@ -53,3 +53,6 @@ Constraints:
 40. Update apply/relaunch hardening + progress UX regression fix (done)
 41. Increase progress bar height to 15px for readable percent text (done)
 42. Updater apply hardening: robocopy retries + explicit PowerShell resolution (done)
+43. Updater startup handshake hardening: stale marker cleanup + marker/log readiness fallback + startup timeout increase (done)
+44. Build script reliability: fail-fast on PyInstaller errors to prevent stale archive packaging (done)
+45. Updater file hygiene: purge previous runtime (_internal + old exe) before copy to prevent mixed Python runtimes (done)

@@ -342,3 +342,25 @@ scripts\build_portable.ps1
 - Result: merge to master now auto-produces a release tag, which then triggers Build Portable Matrix and GitHub Release flow via existing push.tags: v* rule.
 
 
+
+## 2026-03-28 End-of-Day Handoff (Update crash still reproducible)
+
+- Current status:
+  - In-app update download/apply flow works and updater script runs.
+  - App still crashes after relaunch on some updates with: `Failed to load Python DLL ... python312.dll`.
+  - Reproduced after updating to release `0.1.5-alpha`.
+
+- Key findings today:
+  - Mixed runtime residue was observed in install directory after update (`python312.dll` + `python314.dll`).
+  - Updater has been hardened to clean old runtime artifacts before copy (`_internal` + old `VoodooLoader.exe`).
+  - Updater startup handshake/logging improved and build script now fails fast on PyInstaller errors.
+
+- Hypothesis for next session:
+  - Release artifact/runtime mismatch may still exist in published GitHub asset (target release built against Python 3.12), while local builds are Python 3.14.
+  - Need to inspect exact downloaded release archive content and bootloader/runtime compatibility in produced release assets.
+
+- Next actions (priority):
+  1. Add updater post-copy runtime validation (`_internal/python*.dll` compatibility check against target exe metadata).
+  2. Add integration-style updater test that simulates version-to-version replacement with different runtime layouts.
+  3. Verify CI release artifact composition for tagged versions and ensure deterministic Python minor version for releases.
+  4. Re-test update from a clean portable folder and collect fresh `voodoo_loader_updater.log` + `voodoo_loader_update_client.log`.

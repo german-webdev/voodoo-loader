@@ -57,6 +57,9 @@ New-Item -ItemType Directory -Path $distPath -Force | Out-Null
 New-Item -ItemType Directory -Path $workPath -Force | Out-Null
 
 & $PythonExe -m PyInstaller --noconfirm --clean --distpath $distPath --workpath $workPath $specPath
+if ($LASTEXITCODE -ne 0) {
+    throw "PyInstaller build failed with exit code $LASTEXITCODE"
+}
 
 $standaloneExe = Join-Path $distPath "VoodooLoader.exe"
 if (Test-Path $standaloneExe) {

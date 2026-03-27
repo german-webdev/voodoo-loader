@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sys
+import time
 import uuid
 from pathlib import Path
 
@@ -2137,22 +2138,68 @@ class MainWindow(QMainWindow):
         self._close_busy_update_dialog(busy_dialog)
 
         apply_dialog = self._show_busy_update_dialog(self.t('update_applying'))
+        install_dir = Path(sys.executable).resolve().parent
+        exe_path = Path(sys.executable).resolve()
+        client_log_path = install_dir / 'voodoo_loader_update_client.log'
+        updater_log_path = install_dir / 'voodoo_loader_updater.log'
+        updater_log_size_before = updater_log_path.stat().st_size if updater_log_path.is_file() else -1
+
+        def write_client_log(message: str) -> None:
+            try:
+                with client_log_path.open('a', encoding='utf-8') as handle:
+                    handle.write(message + '\n')
+            except Exception:
+                pass
+
         try:
-            install_dir = Path(sys.executable).resolve().parent
-            exe_path = Path(sys.executable).resolve()
-            self.update_service.launch_windows_updater(
+            write_client_log(f'[INFO] Launching updater for package: {package_path}')
+            ready_marker = self.update_service.launch_windows_updater(
                 zip_path=package_path,
                 install_dir=install_dir,
                 exe_path=exe_path,
                 parent_pid=os.getpid(),
             )
+            write_client_log(f'[INFO] Updater launch requested. Ready marker: {ready_marker}')
         except Exception as exc:
             self._close_busy_update_dialog(apply_dialog)
             self._append_log('[WARN] Update apply failed: ' + str(exc))
+            write_client_log(f'[ERROR] Updater launch failed: {exc}')
             QMessageBox.warning(self, self.t('update_title'), self.t('update_prepare_failed'))
             return
 
         self._close_busy_update_dialog(apply_dialog)
+
+        started = False
+        marker_detected = False
+        deadline = time.monotonic() + 15.0
+        while time.monotonic() < deadline:
+            if ready_marker.is_file():
+                started = True
+                marker_detected = True
+                break
+
+            if updater_log_path.is_file():
+                try:
+                    current_size = updater_log_path.stat().st_size
+                    if current_size != updater_log_size_before:
+                        updater_log_content = updater_log_path.read_text(encoding='utf-8', errors='replace')
+                        if 'Updater started' in updater_log_content:
+                            started = True
+                            break
+                except Exception:
+                    pass
+
+            QApplication.processEvents()
+            time.sleep(0.1)
+
+        if not started:
+            self._append_log(f'[WARN] Updater did not report startup readiness: {ready_marker}')
+            write_client_log(f'[ERROR] Updater did not report startup readiness within timeout: {ready_marker}')
+            QMessageBox.warning(self, self.t('update_title'), self.t('update_prepare_failed'))
+            return
+
+        if not marker_detected:
+            write_client_log('[WARN] Ready marker was not detected, startup inferred from updater log activity.')
 
         QMessageBox.information(self, self.t('update_title'), self.t('update_restart_prompt'))
         QApplication.processEvents()
@@ -2319,7 +2366,7 @@ class MainWindow(QMainWindow):
     def _shorten_url(url, max_length):
         if len(url) <= max_length:
             return url
-        return str(url[None:max_length - 3]) + '...'
+        return f"{url[:max_length - 3]}..."
 
     @staticmethod
     def _format_bytes(size: int | None) -> str:

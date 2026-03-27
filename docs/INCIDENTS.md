@@ -84,3 +84,58 @@
   - runtime version resolution (`tests/test_version_runtime.py`)
   - updater script/launch expectations (`tests/test_update_service.py`)
 - Added/updated PRD and upgrade list requirements for update UX and version sync.
+
+## 2026-03-28 - Updater startup handshake race (ready marker false-negative)
+
+### Symptoms
+- Client log reported `Updater did not create start marker`, while updater process had already launched.
+- Update flow aborted before app close, so updater remained waiting for parent process exit.
+
+### Root causes
+1. Startup readiness check relied only on one marker file with a short timeout.
+2. Existing stale marker/log state could produce ambiguous startup diagnostics.
+3. Updater launch path had environment-specific process-creation differences; detached flags were unreliable in this setup.
+
+### Fixes
+- Added stale marker cleanup before updater launch in `launch_windows_updater`.
+- Increased startup readiness timeout in UI update flow.
+- Added fallback readiness detection from updater log activity (`Updater started`) when marker is not yet visible.
+- Preserved persistent client-side diagnostics in `voodoo_loader_update_client.log`.
+- Added regression test updates for updater launch contract and stale marker cleanup.
+
+### Prevention
+- Startup handshakes for external helper processes must use at least two readiness signals (marker + log/event) where possible.
+- Any updater-launch reliability fix must include automated tests and incident log entry before release build.
+
+## 2026-03-28 - Stale portable archive after failed PyInstaller build
+
+### Symptoms
+- Build script printed archive path even when `PyInstaller` module was unavailable.
+- Resulting archive reused stale `dist/portable/VoodooLoader` files.
+
+### Root cause
+- PowerShell build script invoked external `python -m PyInstaller` but did not stop on non-zero `$LASTEXITCODE`.
+
+### Fix
+- Added explicit fail-fast check after PyInstaller invocation in `scripts/build_portable.ps1`.
+
+### Prevention
+- Every external build command in PowerShell scripts must validate `$LASTEXITCODE` and abort on failure.
+
+## 2026-03-28 - Mixed runtime after update (python312 + python314 coexistence)
+
+### Symptoms
+- After update, app folder contained mixed runtime files from different builds (`python312.dll` and `python314.dll`).
+- Relaunch could fail with Python DLL load errors.
+
+### Root cause
+- Updater copied files over existing install directory without cleaning old runtime artifacts.
+- Stale binaries remained in `_internal` and could conflict with updated executable/runtime expectations.
+
+### Fix
+- Updater now removes previous runtime directory (`_internal`) and old `VoodooLoader.exe` before copy.
+- Added post-copy executable size validation and extra logging (`Robocopy exit code`).
+
+### Prevention
+- For binary/runtime updates, copy phase must be preceded by runtime cleanup to avoid cross-version residue.
+- Updater validations should include explicit post-copy integrity checks before relaunch.
