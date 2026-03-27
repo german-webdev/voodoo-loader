@@ -6,6 +6,7 @@ The format follows Keep a Changelog principles and Semantic Versioning.
 
 ## [Unreleased]
 ### Added
+- Auto-tag workflow on master merges: `.github/workflows/auto-tag-on-master.yml` (creates next `vX.Y.Z-alpha` tag).
 - QA gate scripts for local validation: `scripts/qa_gate.ps1` and `scripts/qa_gate.sh`.
 - Git hook installers and pre-push hook gate (`scripts/install_git_hooks.ps1`, `scripts/install_git_hooks.sh`, `.githooks/pre-push`).
 - CI workflow `.github/workflows/qa-gate.yml` for pull requests and pushes to `master`/`dev/**`.

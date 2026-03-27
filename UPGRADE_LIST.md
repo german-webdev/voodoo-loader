@@ -41,3 +41,4 @@ Constraints:
 30. Fix Linux portable CI build conflict (PyInstaller EXE/COLLECT naming + Ubuntu Qt libs install) (done)
 
 31. Introduce mandatory QA gate (local scripts + pre-push hook + CI workflow + governance doc) (done)
+32. Add auto-tag on master merge (next vX.Y.Z-alpha tag generation workflow) (done)

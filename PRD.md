@@ -572,3 +572,11 @@ This program is mandatory and tracked in `UPGRADE_LIST.md`.
 ### 17.4 Test coverage policy for updates
 - Every behavior-changing update must include or update automated tests before build/release.
 - Build/release is blocked when QA gate is red.
+
+## 18. Auto Tagging on Master Merge
+
+- On every push to `master` (merge flow), CI must create and push the next semantic pre-release tag in format `vX.Y.Z-alpha`.
+- Tag creation must be idempotent: if current commit already has a version tag, job exits without creating a duplicate.
+- Auto-tag job must support race-safe retries when concurrent pushes happen.
+- Tag push must trigger release build workflow (`Build Portable Matrix`) via existing `push.tags: v*` rule.
+- Optional skip marker in commit message: `[skip-tag]` or `[no-tag]`.
