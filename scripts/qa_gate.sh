@@ -10,6 +10,14 @@ usage() {
 
 PYTHON_EXE=""
 
+is_working_python() {
+  local candidate="${1:-}"
+  if [[ -z "$candidate" ]]; then
+    return 1
+  fi
+  "$candidate" -V >/dev/null 2>&1
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --python)
@@ -34,22 +42,26 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$PYTHON_EXE" ]]; then
-  if [[ -x ".venv312/Scripts/python.exe" ]]; then
-    PYTHON_EXE=".venv312/Scripts/python.exe"
-  elif [[ -x ".venv/Scripts/python.exe" ]]; then
-    PYTHON_EXE=".venv/Scripts/python.exe"
-  elif [[ -x ".venv312/bin/python" ]]; then
-    PYTHON_EXE=".venv312/bin/python"
-  elif [[ -x ".venv/bin/python" ]]; then
-    PYTHON_EXE=".venv/bin/python"
-  elif command -v python3 >/dev/null 2>&1; then
-    PYTHON_EXE="python3"
-  elif command -v python >/dev/null 2>&1; then
-    PYTHON_EXE="python"
-  else
-    echo "Python interpreter not found" >&2
-    exit 1
-  fi
+  candidates=(
+    ".venv312/Scripts/python.exe"
+    ".venv/Scripts/python.exe"
+    ".venv312/bin/python"
+    ".venv/bin/python"
+    "python3"
+    "python"
+  )
+
+  for candidate in "${candidates[@]}"; do
+    if is_working_python "$candidate"; then
+      PYTHON_EXE="$candidate"
+      break
+    fi
+  done
+fi
+
+if ! is_working_python "$PYTHON_EXE"; then
+  echo "Python interpreter not found or not runnable: $PYTHON_EXE" >&2
+  exit 1
 fi
 
 export PYTHONPATH="$ROOT_DIR/src"
