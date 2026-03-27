@@ -88,7 +88,7 @@ class QueueTableWidget(QTableWidget):
 
     @staticmethod
     def _decode_rows(data: QByteArray) -> list[int]:
-        raw = bytes(data).decode("utf-8").strip()
+        raw = bytes(data.data()).decode("utf-8").strip()
         if not raw:
             return []
         rows: list[int] = []
@@ -181,10 +181,10 @@ class MainWindow(QMainWindow):
             self.language = self.settings.language
         else:
             self.language = 'en'
-        self.queue_items = {}
-        self.queue_order = []
-        self.row_for_item = {}
-        self.aria2_path = None
+        self.queue_items: dict[str, QueueItem] = {}
+        self.queue_order: list[str] = []
+        self.row_for_item: dict[str, int] = {}
+        self.aria2_path: str | None = None
         self._build_ui()
         self.sound_service = SoundService(self, log=self._append_log)
         self._connect_signals()
@@ -2298,6 +2298,7 @@ class MainWindow(QMainWindow):
         if m:
             return f"{m}m {s}s"
         return f"{s}s"
+
 
 
 

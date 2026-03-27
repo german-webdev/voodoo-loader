@@ -32,24 +32,52 @@ Or use launcher:
 launch_voodoo_loader.bat
 ```
 
-## Quality checks
+## Quality checks (manual)
+
+PowerShell:
 
 ```powershell
-$env:PYTHONPATH="$PWD\src"
-.\.venv312\Scripts\python.exe -m ruff check src tests
-.\.venv312\Scripts\python.exe -m mypy src/voodoo_loader
-$env:PYTEST_DISABLE_PLUGIN_AUTOLOAD='1'
-.\.venv312\Scripts\python.exe -m pytest tests -q -p no:cacheprovider -p no:tmpdir
+scripts\qa_gate.ps1
 ```
 
-## Implemented now
+Bash:
 
-- Dynamic queue: can add links while queue is running
-- Optional auth: token, username/password, custom headers
-- Configurable max simultaneous downloads via Settings
-- `aria2c` detection + bootstrap path
-- Queue persistence across sessions for unfinished items
-- RU/EN localization service with in-app language switch
+```bash
+./scripts/qa_gate.sh
+```
+
+## Git pre-push quality gate
+
+Enable hooks path once per clone:
+
+PowerShell:
+
+```powershell
+scripts\install_git_hooks.ps1
+```
+
+Bash:
+
+```bash
+./scripts/install_git_hooks.sh
+```
+
+After this, every `git push` runs QA gate automatically:
+- `ruff check src tests`
+- `mypy src/voodoo_loader`
+- `pytest tests -q -p no:cacheprovider -p no:tmpdir`
+
+Push is blocked if any check fails.
+
+## CI required checks (GitHub)
+
+Workflow: `.github/workflows/qa-gate.yml`
+
+Recommended branch protection for `master`:
+- Require a pull request before merging
+- Require status checks to pass before merging
+- Required check: `QA Gate / qa`
+- Restrict direct pushes to `master`
 
 ## Build Portable Version
 
@@ -75,12 +103,12 @@ scripts\build_portable.bat
 ```
 
 Output artifacts:
-- dist\\portable\\VoodooLoader\\VoodooLoader.exe (Windows local build)
-- dist\\portable\\VoodooLoader-v<version>-windows-x64-portable.zip (Windows)
-- dist/portable/VoodooLoader-v<version>-linux-ubuntu-22.04-x64-portable.tar.gz (Linux CI)
+- `dist\portable\VoodooLoader\VoodooLoader.exe` (Windows local build)
+- `dist\portable\VoodooLoader-v<version>-windows-x64-portable.zip` (Windows)
+- `dist/portable/VoodooLoader-v<version>-linux-ubuntu-22.04-x64-portable.tar.gz` (Linux CI)
 
 GitHub Actions workflow:
-- .github/workflows/build-portable-matrix.yml builds portable archives for:
+- `.github/workflows/build-portable-matrix.yml` builds portable archives for:
   - Windows x64
   - Linux Ubuntu x64
 

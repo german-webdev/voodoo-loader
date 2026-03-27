@@ -319,3 +319,11 @@ scripts\build_portable.ps1
 - CI hardening: Ubuntu workflow installs required Qt/Pulse/XCB system libraries before build.
 - Regression checks: py_compile for spec + pytest (64 passed).
 - Prevention rule: for PyInstaller one-folder mode, executable name and collect directory name must never be identical on non-Windows targets.
+
+### 2026-03-28 - QA gate automation for commit/push and PR merge
+- Added cross-platform local QA scripts: scripts/qa_gate.ps1 and scripts/qa_gate.sh.
+- Added repository-managed pre-push hook: .githooks/pre-push, with bootstrap installers scripts/install_git_hooks.ps1 and scripts/install_git_hooks.sh.
+- Added CI workflow .github/workflows/qa-gate.yml that runs lint/type/tests on pull_request and push to master / dev/**.
+- Added governance guide: docs/REPO_GOVERNANCE.md with branch protection required check QA Gate / qa.
+- Process rule updated: no commit/push/merge without green QA gate.
+

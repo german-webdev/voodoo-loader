@@ -550,3 +550,25 @@ This program is mandatory and tracked in `UPGRADE_LIST.md`.
 - Build matrix is automated in GitHub Actions.
 - On tag push `v*`, build assets must be attached to GitHub Release automatically.
 - In-app updater must select release asset by runtime OS and CPU architecture.
+
+## 17. Engineering Quality Gate and Branch Policy
+
+### 17.1 Mandatory local gate before push
+- Every feature/update must pass automated QA before `git push`.
+- Required checks: `ruff`, `mypy`, `pytest`.
+- Local gate is executed via `scripts/qa_gate.ps1` (Windows/PowerShell) or `scripts/qa_gate.sh` (Bash).
+- Repository pre-push hook must call QA gate and block push on any failure.
+
+### 17.2 Mandatory CI gate before merge
+- Pull requests to `master` must require passing status check `QA Gate / qa`.
+- Merge is allowed only after green CI and code review.
+- Direct pushes to `master` should be restricted by branch protection rules.
+
+### 17.3 Branch and commit policy
+- All feature work is done in dedicated branches: `dev/<type>/<short-name>`.
+- Commits must follow conventional format: `type(scope): summary`.
+- Recommended flow: feature branch -> PR -> QA green -> merge.
+
+### 17.4 Test coverage policy for updates
+- Every behavior-changing update must include or update automated tests before build/release.
+- Build/release is blocked when QA gate is red.

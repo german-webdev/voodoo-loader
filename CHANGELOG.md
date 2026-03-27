@@ -6,15 +6,18 @@ The format follows Keep a Changelog principles and Semantic Versioning.
 
 ## [Unreleased]
 ### Added
-- Cross-platform build workflow for Windows x64 and Ubuntu x64 (`.github/workflows/build-portable-matrix.yml`).
-- Linux packaging script `scripts/build_portable.sh`.
+- QA gate scripts for local validation: `scripts/qa_gate.ps1` and `scripts/qa_gate.sh`.
+- Git hook installers and pre-push hook gate (`scripts/install_git_hooks.ps1`, `scripts/install_git_hooks.sh`, `.githooks/pre-push`).
+- CI workflow `.github/workflows/qa-gate.yml` for pull requests and pushes to `master`/`dev/**`.
 
 ### Changed
+- Development workflow now enforces QA-before-push and QA-before-merge via local hooks and GitHub checks.
 - Portable artifact naming now includes version, OS, architecture, and package type.
 - In-app updater asset selection now prefers runtime OS/architecture specific release files.
 
 ### Known Issues
 - Windows x86 build is deferred with current PySide6/Qt6 stack.
+
 ## [0.1.0-alpha] - 2026-03-28
 ### Added
 - Queue-based downloader architecture on top of aria2.
