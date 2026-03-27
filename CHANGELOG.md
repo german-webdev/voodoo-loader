@@ -4,6 +4,17 @@ All notable changes to Voodoo Loader are documented in this file.
 
 The format follows Keep a Changelog principles and Semantic Versioning.
 
+## [Unreleased]
+### Added
+- Cross-platform build workflow for Windows x64 and Ubuntu x64 (`.github/workflows/build-portable-matrix.yml`).
+- Linux packaging script `scripts/build_portable.sh`.
+
+### Changed
+- Portable artifact naming now includes version, OS, architecture, and package type.
+- In-app updater asset selection now prefers runtime OS/architecture specific release files.
+
+### Known Issues
+- Windows x86 build is deferred with current PySide6/Qt6 stack.
 ## [0.1.0-alpha] - 2026-03-28
 ### Added
 - Queue-based downloader architecture on top of aria2.

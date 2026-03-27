@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import platform
 import re
 import subprocess
 import tempfile
@@ -128,6 +129,31 @@ class UpdateService:
 
         return cls._compare_prerelease(lpre, rpre)
 
+    @staticmethod
+    def runtime_target() -> tuple[str, str]:
+        system = platform.system().lower()
+        machine = platform.machine().lower()
+
+        if system.startswith("win"):
+            target_os = "windows"
+        elif system == "linux":
+            target_os = "linux"
+        elif system == "darwin":
+            target_os = "macos"
+        else:
+            target_os = system
+
+        if machine in {"x86_64", "amd64"}:
+            target_arch = "x64"
+        elif machine in {"x86", "i386", "i686"}:
+            target_arch = "x86"
+        elif machine in {"arm64", "aarch64"}:
+            target_arch = "arm64"
+        else:
+            target_arch = machine
+
+        return target_os, target_arch
+
     def _api_url(self, repository: str) -> str:
         return f"https://api.github.com/repos/{repository}/releases"
 
@@ -146,40 +172,87 @@ class UpdateService:
         return json.loads(payload)
 
     @staticmethod
-    def _pick_asset_urls(assets: list[dict]) -> tuple[str, str, str]:
+    def _asset_score(name: str, target_os: str, target_arch: str) -> int:
+        lower_name = name.lower()
+        score = 0
+
+        if "portable" in lower_name:
+            score += 20
+
+        if target_os and target_os in lower_name:
+            score += 15
+
+        if target_os == "linux" and "ubuntu" in lower_name:
+            score += 3
+
+        arch_pattern = re.compile(rf"(^|[-_.]){re.escape(target_arch)}($|[-_.])") if target_arch else None
+        if arch_pattern and arch_pattern.search(lower_name):
+            score += 10
+        elif target_arch and target_arch in lower_name:
+            score += 8
+
+        if target_os == "windows" and lower_name.endswith(".zip"):
+            score += 5
+        if target_os == "linux" and (lower_name.endswith(".tar.gz") or lower_name.endswith(".tgz")):
+            score += 5
+
+        return score
+
+    @classmethod
+    def _pick_asset_urls(
+        cls,
+        assets: list[dict],
+        target_os: str = "",
+        target_arch: str = "",
+    ) -> tuple[str, str, str]:
         if not assets:
             return ("", "", "")
 
-        preferred_zip = ""
-        preferred_name = ""
-        checksum_url = ""
+        candidates: list[tuple[int, str, str]] = []
+        checksums: list[tuple[str, str]] = []
+        fallback_name = ""
+        fallback_url = ""
 
         for asset in assets:
-            name = str(asset.get("name", ""))
-            url = str(asset.get("browser_download_url", ""))
-            lower_name = name.lower()
-            if not url:
+            name = str(asset.get("name", "")).strip()
+            url = str(asset.get("browser_download_url", "")).strip()
+            if not name or not url:
                 continue
 
-            if lower_name.endswith(".sha256") and not checksum_url:
-                checksum_url = url
+            lower_name = name.lower()
+            if lower_name.endswith(".sha256"):
+                checksums.append((name, url))
+                continue
 
-            if lower_name.endswith(".zip"):
-                if "portable" in lower_name:
-                    return (name, url, checksum_url)
-                if not preferred_zip:
-                    preferred_zip = url
-                    preferred_name = name
+            is_archive = lower_name.endswith(".zip") or lower_name.endswith(".tar.gz") or lower_name.endswith(".tgz")
+            if not is_archive:
+                continue
 
-        if preferred_zip:
-            return (preferred_name, preferred_zip, checksum_url)
+            if not fallback_url:
+                fallback_name = name
+                fallback_url = url
 
-        first_asset = assets[0]
-        return (
-            str(first_asset.get("name", "")),
-            str(first_asset.get("browser_download_url", "")),
-            checksum_url,
-        )
+            candidates.append((cls._asset_score(name, target_os, target_arch), name, url))
+
+        if not candidates:
+            return ("", "", checksums[0][1] if checksums else "")
+
+        candidates.sort(key=lambda item: item[0], reverse=True)
+        _, selected_name, selected_url = candidates[0]
+
+        checksum_url = ""
+        selected_lower = selected_name.lower()
+        for checksum_name, checksum_candidate_url in checksums:
+            if selected_lower in checksum_name.lower():
+                checksum_url = checksum_candidate_url
+                break
+        if not checksum_url and checksums:
+            checksum_url = checksums[0][1]
+
+        if selected_url:
+            return (selected_name, selected_url, checksum_url)
+
+        return (fallback_name, fallback_url, checksum_url)
 
     def check_for_updates(self, current_version: str, repository: str = "", timeout_sec: int = 10) -> UpdateCheckResult:
         current = self.normalize_version(current_version)
@@ -202,6 +275,8 @@ class UpdateService:
         if not isinstance(payload, list):
             return UpdateCheckResult(current_version=current, error="update_parse_error")
 
+        target_os, target_arch = self.runtime_target()
+
         best_release: UpdateRelease | None = None
         for release_raw in payload:
             if not isinstance(release_raw, dict):
@@ -217,7 +292,11 @@ class UpdateService:
             if best_release is None or self.compare_versions(version, best_release.version) > 0:
                 assets = release_raw.get("assets", [])
                 if isinstance(assets, list):
-                    asset_name, asset_url, checksum_url = self._pick_asset_urls(assets)
+                    asset_name, asset_url, checksum_url = self._pick_asset_urls(
+                        assets,
+                        target_os=target_os,
+                        target_arch=target_arch,
+                    )
                 else:
                     asset_name, asset_url, checksum_url = ("", "", "")
 
@@ -355,4 +434,3 @@ class UpdateService:
             creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,
             close_fds=True,
         )
-

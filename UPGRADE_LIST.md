@@ -14,7 +14,7 @@ Status legend: `pending`, `in_progress`, `done`, `deferred`
 9. Replace move up/down/top/bottom actions with drag-and-drop reordering (`done`)
 10. Add context-menu priority actions: High / Medium / Low (`done`)
 11. Move aria2 parameters to Settings dialog and remove inline settings button from speed block (`done`)
-12. Rename `aria2 Parameters` UI block to `Speed` / `Пресеты скорости` (`done`)
+12. Rename `aria2 Parameters` UI block to `Speed` / `РџСЂРµСЃРµС‚С‹ СЃРєРѕСЂРѕСЃС‚Рё` (`done`)
 13. Move `Continue / Resume (-c)` to Settings with explanatory hint (`done`)
 14. Add `Downloads` menu and duplicate queue context actions there (`done`)
 15. Add actions: open downloaded file and open containing folder (`done`)
@@ -37,3 +37,4 @@ Constraints:
 27. Fix `Start` regression in `_build_download_options` and add dedicated start-path regression test (`done`)
 
 28. Help menu + in-app update flow (GitHub Releases, modal check/about, update apply) (done)
+29. Cross-platform build matrix + release artifact naming convention (done)

@@ -456,7 +456,7 @@ This program is mandatory and tracked in `UPGRADE_LIST.md`.
 ### 14.1 Queue and list UX
 - Remove `Destination` from queue table.
 - Show per-item total size in queue table.
-- Add localized queue block title (`Queue downloads` / `РћС‡РµСЂРµРґСЊ Р·Р°РєР°С‡РµРє`).
+- Add localized queue block title (`Queue downloads` / `Р С›РЎвЂЎР ВµРЎР‚Р ВµР Т‘РЎРЉ Р В·Р В°Р С”Р В°РЎвЂЎР ВµР С”`).
 - Add item checkbox selection and `Select all` control.
 - Add status color coding:
   - failed = red
@@ -477,7 +477,7 @@ This program is mandatory and tracked in `UPGRADE_LIST.md`.
 
 ### 14.3 Settings migration
 - Move aria2 tuning options from inline panel to `Settings` dialog.
-- Rename inline speed block to `Speed` / `РџСЂРµСЃРµС‚С‹ СЃРєРѕСЂРѕСЃС‚Рё`.
+- Rename inline speed block to `Speed` / `Р СџРЎР‚Р ВµРЎРѓР ВµРЎвЂљРЎвЂ№ РЎРѓР С”Р С•РЎР‚Р С•РЎРѓРЎвЂљР С‘`.
 - Move `Continue / Resume (-c)` into `Settings` and provide an explanatory hint.
 - Move authentication controls into `Settings` dialog.
 
@@ -506,10 +506,10 @@ This program is mandatory and tracked in `UPGRADE_LIST.md`.
 - Portable build is allowed only after green full test suite.
 
 ### 14.8 Help Menu and In-App Update Flow
-- Add top-level menu `Help` / `Помощь` after `Settings`.
+- Add top-level menu `Help` / `РџРѕРјРѕС‰СЊ` after `Settings`.
 - `Help` must include two modal actions:
-  - `Check Voodoo Loader updates` / `Проверить обновление Voodoo Loader`
-  - `About` / `О программе`
+  - `Check Voodoo Loader updates` / `РџСЂРѕРІРµСЂРёС‚СЊ РѕР±РЅРѕРІР»РµРЅРёРµ Voodoo Loader`
+  - `About` / `Рћ РїСЂРѕРіСЂР°РјРјРµ`
 - Update-check modal flow:
   1. Show blocking modal state `Checking for updates...`.
   2. Query GitHub Releases API for configured repository.
@@ -532,3 +532,21 @@ This program is mandatory and tracked in `UPGRADE_LIST.md`.
 - Every release must update `CHANGELOG.md` with patch notes.
 - Changelog entries must include: Added / Changed / Fixed / Known Issues.
 - Git tags must match release versions (`v0.1.0-alpha`, `v0.1.1`, etc.).
+## 16. Cross-Platform Build Matrix and Artifact Naming
+
+### 16.1 Supported build targets (current)
+- Windows x64 portable
+- Linux Ubuntu x64 portable
+
+### 16.2 Planned/Deferred targets
+- Windows x86 portable (`deferred`): blocked by current UI stack dependency on PySide6/Qt6 Windows binaries.
+
+### 16.3 Artifact naming convention (mandatory)
+- `VoodooLoader-v<version>-windows-x64-portable.zip`
+- `VoodooLoader-v<version>-linux-ubuntu-22.04-x64-portable.tar.gz`
+- Future x86 example (when supported): `VoodooLoader-v<version>-windows-x86-portable.zip`
+
+### 16.4 CI/CD release rules
+- Build matrix is automated in GitHub Actions.
+- On tag push `v*`, build assets must be attached to GitHub Release automatically.
+- In-app updater must select release asset by runtime OS and CPU architecture.

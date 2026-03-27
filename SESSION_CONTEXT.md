@@ -3,120 +3,120 @@
 Updated: 2026-03-28
 Project root: `F:\AI\p-m\hf_aria2_downloader_gui`
 
-## 1) Что это за проект
+## 1) Р§С‚Рѕ СЌС‚Рѕ Р·Р° РїСЂРѕРµРєС‚
 
-`Voodoo Loader` — Windows desktop GUI downloader поверх `aria2c`.
-Цель: быстрые, возобновляемые, очередные загрузки по **любым прямым ссылкам** (не только Hugging Face) с удобным UX, локализацией RU/EN и безопасной обработкой секретов.
+`Voodoo Loader` вЂ” Windows desktop GUI downloader РїРѕРІРµСЂС… `aria2c`.
+Р¦РµР»СЊ: Р±С‹СЃС‚СЂС‹Рµ, РІРѕР·РѕР±РЅРѕРІР»СЏРµРјС‹Рµ, РѕС‡РµСЂРµРґРЅС‹Рµ Р·Р°РіСЂСѓР·РєРё РїРѕ **Р»СЋР±С‹Рј РїСЂСЏРјС‹Рј СЃСЃС‹Р»РєР°Рј** (РЅРµ С‚РѕР»СЊРєРѕ Hugging Face) СЃ СѓРґРѕР±РЅС‹Рј UX, Р»РѕРєР°Р»РёР·Р°С†РёРµР№ RU/EN Рё Р±РµР·РѕРїР°СЃРЅРѕР№ РѕР±СЂР°Р±РѕС‚РєРѕР№ СЃРµРєСЂРµС‚РѕРІ.
 
-Главный источник требований: `PRD.md`.
+Р“Р»Р°РІРЅС‹Р№ РёСЃС‚РѕС‡РЅРёРє С‚СЂРµР±РѕРІР°РЅРёР№: `PRD.md`.
 
-## 2) Что считать source of truth
+## 2) Р§С‚Рѕ СЃС‡РёС‚Р°С‚СЊ source of truth
 
-1. `PRD.md` — продуктовые требования и приоритеты.
-2. `CODEX.md` — инженерные принципы и ограничения.
-3. `CODEX_IMPLEMENTATION_GUIDE.md` — пайплайн разработки (модули, тесты, этапность).
-4. Этот файл (`SESSION_CONTEXT.md`) — оперативный контекст для продолжения сессий.
+1. `PRD.md` вЂ” РїСЂРѕРґСѓРєС‚РѕРІС‹Рµ С‚СЂРµР±РѕРІР°РЅРёСЏ Рё РїСЂРёРѕСЂРёС‚РµС‚С‹.
+2. `CODEX.md` вЂ” РёРЅР¶РµРЅРµСЂРЅС‹Рµ РїСЂРёРЅС†РёРїС‹ Рё РѕРіСЂР°РЅРёС‡РµРЅРёСЏ.
+3. `CODEX_IMPLEMENTATION_GUIDE.md` вЂ” РїР°Р№РїР»Р°Р№РЅ СЂР°Р·СЂР°Р±РѕС‚РєРё (РјРѕРґСѓР»Рё, С‚РµСЃС‚С‹, СЌС‚Р°РїРЅРѕСЃС‚СЊ).
+4. Р­С‚РѕС‚ С„Р°Р№Р» (`SESSION_CONTEXT.md`) вЂ” РѕРїРµСЂР°С‚РёРІРЅС‹Р№ РєРѕРЅС‚РµРєСЃС‚ РґР»СЏ РїСЂРѕРґРѕР»Р¶РµРЅРёСЏ СЃРµСЃСЃРёР№.
 
-## 3) Важные договорённости
+## 3) Р’Р°Р¶РЅС‹Рµ РґРѕРіРѕРІРѕСЂС‘РЅРЅРѕСЃС‚Рё
 
-- Рабочее название зафиксировано: **Voodoo Loader**.
-- Legacy MVP файлы в корне (например, старый `voodoo_loader_app.py`) **не являются архитектурной базой**.
-- Параллелизм очереди: `max_concurrent_downloads = 0` означает **без ограничений**.
-- Секреты по умолчанию **не сохраняются**, только явный opt-in через чекбоксы.
+- Р Р°Р±РѕС‡РµРµ РЅР°Р·РІР°РЅРёРµ Р·Р°С„РёРєСЃРёСЂРѕРІР°РЅРѕ: **Voodoo Loader**.
+- Legacy MVP С„Р°Р№Р»С‹ РІ РєРѕСЂРЅРµ (РЅР°РїСЂРёРјРµСЂ, СЃС‚Р°СЂС‹Р№ `voodoo_loader_app.py`) **РЅРµ СЏРІР»СЏСЋС‚СЃСЏ Р°СЂС…РёС‚РµРєС‚СѓСЂРЅРѕР№ Р±Р°Р·РѕР№**.
+- РџР°СЂР°Р»Р»РµР»РёР·Рј РѕС‡РµСЂРµРґРё: `max_concurrent_downloads = 0` РѕР·РЅР°С‡Р°РµС‚ **Р±РµР· РѕРіСЂР°РЅРёС‡РµРЅРёР№**.
+- РЎРµРєСЂРµС‚С‹ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ **РЅРµ СЃРѕС…СЂР°РЅСЏСЋС‚СЃСЏ**, С‚РѕР»СЊРєРѕ СЏРІРЅС‹Р№ opt-in С‡РµСЂРµР· С‡РµРєР±РѕРєСЃС‹.
 
-## 4) Текущее состояние реализации (факт)
+## 4) РўРµРєСѓС‰РµРµ СЃРѕСЃС‚РѕСЏРЅРёРµ СЂРµР°Р»РёР·Р°С†РёРё (С„Р°РєС‚)
 
-## 4.1 Архитектура
+## 4.1 РђСЂС…РёС‚РµРєС‚СѓСЂР°
 
-Актуальная modular-структура (рабочая):
+РђРєС‚СѓР°Р»СЊРЅР°СЏ modular-СЃС‚СЂСѓРєС‚СѓСЂР° (СЂР°Р±РѕС‡Р°СЏ):
 
 - `src/voodoo_loader/main.py`, `app.py`, `main_window.py`
 - `models/` (`AppSettings`, `QueueItem`, `DownloadOptions`, ...)
 - `services/` (`aria2_service`, `aria2_provisioning_service`, `settings_service`, `localization_service`)
 - `parsers/aria2_output_parser.py`
 - `widgets/settings_dialog.py`
-- `tests/` (40 тестов)
+- `tests/` (40 С‚РµСЃС‚РѕРІ)
 
-## 4.2 Функционально уже сделано
+## 4.2 Р¤СѓРЅРєС†РёРѕРЅР°Р»СЊРЅРѕ СѓР¶Рµ СЃРґРµР»Р°РЅРѕ
 
-- Универсальная очередь ссылок (добавление во время активной загрузки).
+- РЈРЅРёРІРµСЂСЃР°Р»СЊРЅР°СЏ РѕС‡РµСЂРµРґСЊ СЃСЃС‹Р»РѕРє (РґРѕР±Р°РІР»РµРЅРёРµ РІРѕ РІСЂРµРјСЏ Р°РєС‚РёРІРЅРѕР№ Р·Р°РіСЂСѓР·РєРё).
 - Batch import `.txt`.
-- Приоритеты очереди: move up/down/top/bottom.
+- РџСЂРёРѕСЂРёС‚РµС‚С‹ РѕС‡РµСЂРµРґРё: move up/down/top/bottom.
 - Retry selected / retry all failed-canceled.
 - Remove selected / remove failed-canceled.
-- Контекстное меню + горячие клавиши для queue-операций.
-- Настройка concurrency в Settings (`0 = unlimited`).
-- Прогресс + метаданные: current item, downloaded/total, remaining, speed, ETA.
-- Улучшенные error hints (401/403, 404, DNS, timeout, 429, 503, disk, perms, TLS и т.д.).
-- Сохранение состояния окна и ширин колонок queue.
-- Восстановление незавершённой очереди между запусками.
-- `aria2c` detection + auto-bootstrap (если отсутствует бинарь).
-- Командный preview с маскировкой секретов.
-- RU/EN локализация с переключением в приложении.
+- РљРѕРЅС‚РµРєСЃС‚РЅРѕРµ РјРµРЅСЋ + РіРѕСЂСЏС‡РёРµ РєР»Р°РІРёС€Рё РґР»СЏ queue-РѕРїРµСЂР°С†РёР№.
+- РќР°СЃС‚СЂРѕР№РєР° concurrency РІ Settings (`0 = unlimited`).
+- РџСЂРѕРіСЂРµСЃСЃ + РјРµС‚Р°РґР°РЅРЅС‹Рµ: current item, downloaded/total, remaining, speed, ETA.
+- РЈР»СѓС‡С€РµРЅРЅС‹Рµ error hints (401/403, 404, DNS, timeout, 429, 503, disk, perms, TLS Рё С‚.Рґ.).
+- РЎРѕС…СЂР°РЅРµРЅРёРµ СЃРѕСЃС‚РѕСЏРЅРёСЏ РѕРєРЅР° Рё С€РёСЂРёРЅ РєРѕР»РѕРЅРѕРє queue.
+- Р’РѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёРµ РЅРµР·Р°РІРµСЂС€С‘РЅРЅРѕР№ РѕС‡РµСЂРµРґРё РјРµР¶РґСѓ Р·Р°РїСѓСЃРєР°РјРё.
+- `aria2c` detection + auto-bootstrap (РµСЃР»Рё РѕС‚СЃСѓС‚СЃС‚РІСѓРµС‚ Р±РёРЅР°СЂСЊ).
+- РљРѕРјР°РЅРґРЅС‹Р№ preview СЃ РјР°СЃРєРёСЂРѕРІРєРѕР№ СЃРµРєСЂРµС‚РѕРІ.
+- RU/EN Р»РѕРєР°Р»РёР·Р°С†РёСЏ СЃ РїРµСЂРµРєР»СЋС‡РµРЅРёРµРј РІ РїСЂРёР»РѕР¶РµРЅРёРё.
 
-## 4.3 Authentication UX (последние итерации)
+## 4.3 Authentication UX (РїРѕСЃР»РµРґРЅРёРµ РёС‚РµСЂР°С†РёРё)
 
-Сделано полноценно:
+РЎРґРµР»Р°РЅРѕ РїРѕР»РЅРѕС†РµРЅРЅРѕ:
 
-- Collapsible auth section (по умолчанию свернута).
-- Режимы авторизации:
+- Collapsible auth section (РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ СЃРІРµСЂРЅСѓС‚Р°).
+- Р РµР¶РёРјС‹ Р°РІС‚РѕСЂРёР·Р°С†РёРё:
   - `No auth`
   - `Token + headers`
   - `Login/password`
-- Динамический показ нужных полей по режиму.
-- Подсказки (help text) по выбранному auth mode.
-- `Show token` и `Show password`.
-- Валидация перед Start/Preview:
-  - token-mode: нужен token или хотя бы один header
-  - basic-mode: нужны username + password
-- Opt-in сохранение секрета:
+- Р”РёРЅР°РјРёС‡РµСЃРєРёР№ РїРѕРєР°Р· РЅСѓР¶РЅС‹С… РїРѕР»РµР№ РїРѕ СЂРµР¶РёРјСѓ.
+- РџРѕРґСЃРєР°Р·РєРё (help text) РїРѕ РІС‹Р±СЂР°РЅРЅРѕРјСѓ auth mode.
+- `Show token` Рё `Show password`.
+- Р’Р°Р»РёРґР°С†РёСЏ РїРµСЂРµРґ Start/Preview:
+  - token-mode: РЅСѓР¶РµРЅ token РёР»Рё С…РѕС‚СЏ Р±С‹ РѕРґРёРЅ header
+  - basic-mode: РЅСѓР¶РЅС‹ username + password
+- Opt-in СЃРѕС…СЂР°РЅРµРЅРёРµ СЃРµРєСЂРµС‚Р°:
   - `Remember token`
   - `Remember username`
-- Сохранение `auth_mode` в settings + обратная совместимость со старыми settings.
+- РЎРѕС…СЂР°РЅРµРЅРёРµ `auth_mode` РІ settings + РѕР±СЂР°С‚РЅР°СЏ СЃРѕРІРјРµСЃС‚РёРјРѕСЃС‚СЊ СЃРѕ СЃС‚Р°СЂС‹РјРё settings.
 
-## 4.4 Security состояние
+## 4.4 Security СЃРѕСЃС‚РѕСЏРЅРёРµ
 
-- В логах и preview токен маскируется.
-- Секреты не персистятся без opt-in.
-- В portable-режиме settings хранятся в plaintext JSON рядом с exe (это явно задокументировано).
+- Р’ Р»РѕРіР°С… Рё preview С‚РѕРєРµРЅ РјР°СЃРєРёСЂСѓРµС‚СЃСЏ.
+- РЎРµРєСЂРµС‚С‹ РЅРµ РїРµСЂСЃРёСЃС‚СЏС‚СЃСЏ Р±РµР· opt-in.
+- Р’ portable-СЂРµР¶РёРјРµ settings С…СЂР°РЅСЏС‚СЃСЏ РІ plaintext JSON СЂСЏРґРѕРј СЃ exe (СЌС‚Рѕ СЏРІРЅРѕ Р·Р°РґРѕРєСѓРјРµРЅС‚РёСЂРѕРІР°РЅРѕ).
 
-## 5) Качество/проверки
+## 5) РљР°С‡РµСЃС‚РІРѕ/РїСЂРѕРІРµСЂРєРё
 
-Последний стабильный прогон:
+РџРѕСЃР»РµРґРЅРёР№ СЃС‚Р°Р±РёР»СЊРЅС‹Р№ РїСЂРѕРіРѕРЅ:
 
-- `ruff` — passed
-- `mypy` — passed
-- `pytest` — **43 passed**
+- `ruff` вЂ” passed
+- `mypy` вЂ” passed
+- `pytest` вЂ” **43 passed**
 
-## 6) Portable build (уже готов)
+## 6) Portable build (СѓР¶Рµ РіРѕС‚РѕРІ)
 
-Сделана и проверена сборка portable через PyInstaller.
+РЎРґРµР»Р°РЅР° Рё РїСЂРѕРІРµСЂРµРЅР° СЃР±РѕСЂРєР° portable С‡РµСЂРµР· PyInstaller.
 
-Build-файлы:
+Build-С„Р°Р№Р»С‹:
 
 - `packaging/voodoo_loader.spec`
 - `scripts/build_portable.ps1`
 - `scripts/build_portable.bat`
 
-Артефакты сборки:
+РђСЂС‚РµС„Р°РєС‚С‹ СЃР±РѕСЂРєРё:
 
 - `dist/portable/VoodooLoader/VoodooLoader.exe`
 - `dist/portable/VoodooLoader-portable.zip`
 
-## 7) Как быстро продолжить работу в следующей сессии
+## 7) РљР°Рє Р±С‹СЃС‚СЂРѕ РїСЂРѕРґРѕР»Р¶РёС‚СЊ СЂР°Р±РѕС‚Сѓ РІ СЃР»РµРґСѓСЋС‰РµР№ СЃРµСЃСЃРёРё
 
-## 7.1 Минимальный стартовый чек-лист
+## 7.1 РњРёРЅРёРјР°Р»СЊРЅС‹Р№ СЃС‚Р°СЂС‚РѕРІС‹Р№ С‡РµРє-Р»РёСЃС‚
 
-1. Открыть и прочитать:
+1. РћС‚РєСЂС‹С‚СЊ Рё РїСЂРѕС‡РёС‚Р°С‚СЊ:
    - `PRD.md`
    - `SESSION_CONTEXT.md`
-2. Запустить quality checks:
+2. Р—Р°РїСѓСЃС‚РёС‚СЊ quality checks:
    - `ruff`
    - `mypy`
    - `pytest`
-3. Только затем брать следующий пункт из backlog.
+3. РўРѕР»СЊРєРѕ Р·Р°С‚РµРј Р±СЂР°С‚СЊ СЃР»РµРґСѓСЋС‰РёР№ РїСѓРЅРєС‚ РёР· backlog.
 
-## 7.2 Команды
+## 7.2 РљРѕРјР°РЅРґС‹
 
 ```powershell
 $env:PYTHONPATH="$PWD\src"
@@ -126,42 +126,42 @@ $env:PYTEST_DISABLE_PLUGIN_AUTOLOAD='1'
 .\.venv312\Scripts\python.exe -m pytest tests -q -p no:cacheprovider -p no:tmpdir
 ```
 
-Запуск приложения:
+Р—Р°РїСѓСЃРє РїСЂРёР»РѕР¶РµРЅРёСЏ:
 
 ```powershell
 $env:PYTHONPATH="$PWD\src"
 .\.venv312\Scripts\python.exe -m voodoo_loader.main
 ```
 
-Сборка portable:
+РЎР±РѕСЂРєР° portable:
 
 ```powershell
 scripts\build_portable.ps1
 ```
 
-## 8) Приоритетный backlog (следующие шаги)
+## 8) РџСЂРёРѕСЂРёС‚РµС‚РЅС‹Р№ backlog (СЃР»РµРґСѓСЋС‰РёРµ С€Р°РіРё)
 
-1. Manual QA portable-артефакта на «чистой» машине/профиле:
+1. Manual QA portable-Р°СЂС‚РµС„Р°РєС‚Р° РЅР° В«С‡РёСЃС‚РѕР№В» РјР°С€РёРЅРµ/РїСЂРѕС„РёР»Рµ:
    - first run
    - aria2 bootstrap
    - queue lifecycle
    - exit behavior
-2. (Опционально) RPC mode поверх aria2 daemon.
-3. (Важно для security roadmap) Перенос хранения секретов из plaintext в OS secure store.
-4. (Опционально) Installer-версия как secondary distribution.
-5. UX-полиш/локализационный pass по оставшимся статическим англоязычным строкам в UI.
+2. (РћРїС†РёРѕРЅР°Р»СЊРЅРѕ) RPC mode РїРѕРІРµСЂС… aria2 daemon.
+3. (Р’Р°Р¶РЅРѕ РґР»СЏ security roadmap) РџРµСЂРµРЅРѕСЃ С…СЂР°РЅРµРЅРёСЏ СЃРµРєСЂРµС‚РѕРІ РёР· plaintext РІ OS secure store.
+4. (РћРїС†РёРѕРЅР°Р»СЊРЅРѕ) Installer-РІРµСЂСЃРёСЏ РєР°Рє secondary distribution.
+5. UX-РїРѕР»РёС€/Р»РѕРєР°Р»РёР·Р°С†РёРѕРЅРЅС‹Р№ pass РїРѕ РѕСЃС‚Р°РІС€РёРјСЃСЏ СЃС‚Р°С‚РёС‡РµСЃРєРёРј Р°РЅРіР»РѕСЏР·С‹С‡РЅС‹Рј СЃС‚СЂРѕРєР°Рј РІ UI.
 
-## 9) Что НЕ делать
+## 9) Р§С‚Рѕ РќР• РґРµР»Р°С‚СЊ
 
-- Не возвращаться к legacy MVP как к основной базе.
-- Не ломать модульную структуру в сторону монолитного скрипта.
-- Не сохранять секреты без явного opt-in.
-- Не использовать destructive git-операции.
+- РќРµ РІРѕР·РІСЂР°С‰Р°С‚СЊСЃСЏ Рє legacy MVP РєР°Рє Рє РѕСЃРЅРѕРІРЅРѕР№ Р±Р°Р·Рµ.
+- РќРµ Р»РѕРјР°С‚СЊ РјРѕРґСѓР»СЊРЅСѓСЋ СЃС‚СЂСѓРєС‚СѓСЂСѓ РІ СЃС‚РѕСЂРѕРЅСѓ РјРѕРЅРѕР»РёС‚РЅРѕРіРѕ СЃРєСЂРёРїС‚Р°.
+- РќРµ СЃРѕС…СЂР°РЅСЏС‚СЊ СЃРµРєСЂРµС‚С‹ Р±РµР· СЏРІРЅРѕРіРѕ opt-in.
+- РќРµ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ destructive git-РѕРїРµСЂР°С†РёРё.
 
-## 10) Короткое резюме этапа
+## 10) РљРѕСЂРѕС‚РєРѕРµ СЂРµР·СЋРјРµ СЌС‚Р°РїР°
 
-Проект на стадии: **feature-complete для MVP+ по PRD (core + auth UX + portable build)**.
-Текущий фокус: стабилизация portable релиза, QA и security-hardening (secure credential storage).
+РџСЂРѕРµРєС‚ РЅР° СЃС‚Р°РґРёРё: **feature-complete РґР»СЏ MVP+ РїРѕ PRD (core + auth UX + portable build)**.
+РўРµРєСѓС‰РёР№ С„РѕРєСѓСЃ: СЃС‚Р°Р±РёР»РёР·Р°С†РёСЏ portable СЂРµР»РёР·Р°, QA Рё security-hardening (secure credential storage).
 
 ## 11) Decision Log
 
@@ -182,30 +182,30 @@ scripts\build_portable.ps1
 
 ## 12) Reliability Incident Log (Skill Pipeline)
 
-Этот раздел обязателен к пополнению при каждом багфиксе/регрессе/проблеме сборки.
+Р­С‚РѕС‚ СЂР°Р·РґРµР» РѕР±СЏР·Р°С‚РµР»РµРЅ Рє РїРѕРїРѕР»РЅРµРЅРёСЋ РїСЂРё РєР°Р¶РґРѕРј Р±Р°РіС„РёРєСЃРµ/СЂРµРіСЂРµСЃСЃРµ/РїСЂРѕР±Р»РµРјРµ СЃР±РѕСЂРєРё.
 
 ### 2026-03-26 - Portable startup import crash
-- Symptom: запуск `dist/portable/VoodooLoader.exe` падал с `ImportError: attempted relative import with no known parent package`.
-- Root cause: entry-point `src/voodoo_loader/main.py` использовал relative imports (`from .app ...`), что ломается в packaged runtime-контексте PyInstaller.
-- Fix: переведены импорты в `main.py` на absolute (`from voodoo_loader.app ...`, `from voodoo_loader.main_window ...`).
-- Regression checks: `ruff`, `mypy`, `pytest`, пересборка portable, smoke launch `VoodooLoader.exe`.
-- Prevention rule: entry-point файлы для packaged build должны использовать только absolute imports.
+- Symptom: Р·Р°РїСѓСЃРє `dist/portable/VoodooLoader.exe` РїР°РґР°Р» СЃ `ImportError: attempted relative import with no known parent package`.
+- Root cause: entry-point `src/voodoo_loader/main.py` РёСЃРїРѕР»СЊР·РѕРІР°Р» relative imports (`from .app ...`), С‡С‚Рѕ Р»РѕРјР°РµС‚СЃСЏ РІ packaged runtime-РєРѕРЅС‚РµРєСЃС‚Рµ PyInstaller.
+- Fix: РїРµСЂРµРІРµРґРµРЅС‹ РёРјРїРѕСЂС‚С‹ РІ `main.py` РЅР° absolute (`from voodoo_loader.app ...`, `from voodoo_loader.main_window ...`).
+- Regression checks: `ruff`, `mypy`, `pytest`, РїРµСЂРµСЃР±РѕСЂРєР° portable, smoke launch `VoodooLoader.exe`.
+- Prevention rule: entry-point С„Р°Р№Р»С‹ РґР»СЏ packaged build РґРѕР»Р¶РЅС‹ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ С‚РѕР»СЊРєРѕ absolute imports.
 
 ### 2026-03-26 - Portable build file lock (WinError 5)
-- Symptom: PyInstaller build падал на этапе `EXE` с `PermissionError: [WinError 5]` при записи `dist/portable/VoodooLoader.exe`.
-- Root cause: в момент сборки были запущены активные процессы `VoodooLoader.exe`, блокировавшие exe-файл.
-- Fix: остановлены процессы `VoodooLoader`, затем выполнена повторная сборка.
-- Regression checks: проверка процесса перед сборкой, успешная полная сборка portable и проверка артефактов.
-- Prevention rule: перед любой portable-сборкой обязательно завершать все процессы `VoodooLoader.exe`.
+- Symptom: PyInstaller build РїР°РґР°Р» РЅР° СЌС‚Р°РїРµ `EXE` СЃ `PermissionError: [WinError 5]` РїСЂРё Р·Р°РїРёСЃРё `dist/portable/VoodooLoader.exe`.
+- Root cause: РІ РјРѕРјРµРЅС‚ СЃР±РѕСЂРєРё Р±С‹Р»Рё Р·Р°РїСѓС‰РµРЅС‹ Р°РєС‚РёРІРЅС‹Рµ РїСЂРѕС†РµСЃСЃС‹ `VoodooLoader.exe`, Р±Р»РѕРєРёСЂРѕРІР°РІС€РёРµ exe-С„Р°Р№Р».
+- Fix: РѕСЃС‚Р°РЅРѕРІР»РµРЅС‹ РїСЂРѕС†РµСЃСЃС‹ `VoodooLoader`, Р·Р°С‚РµРј РІС‹РїРѕР»РЅРµРЅР° РїРѕРІС‚РѕСЂРЅР°СЏ СЃР±РѕСЂРєР°.
+- Regression checks: РїСЂРѕРІРµСЂРєР° РїСЂРѕС†РµСЃСЃР° РїРµСЂРµРґ СЃР±РѕСЂРєРѕР№, СѓСЃРїРµС€РЅР°СЏ РїРѕР»РЅР°СЏ СЃР±РѕСЂРєР° portable Рё РїСЂРѕРІРµСЂРєР° Р°СЂС‚РµС„Р°РєС‚РѕРІ.
+- Prevention rule: РїРµСЂРµРґ Р»СЋР±РѕР№ portable-СЃР±РѕСЂРєРѕР№ РѕР±СЏР·Р°С‚РµР»СЊРЅРѕ Р·Р°РІРµСЂС€Р°С‚СЊ РІСЃРµ РїСЂРѕС†РµСЃСЃС‹ `VoodooLoader.exe`.
 
 
 
 ### 2026-03-26 - Queue downloads received hash-like filenames from redirected sources
-- Symptom: при multi-queue загрузке (например, Hugging Face `?download=true`) файлы сохранялись как длинные hash-строки вместо ожидаемых имён `.safetensors`.
-- Root cause: `-o` задавался только при ручном `filename_override`; при пакетной очереди override игнорировался, и aria2 брал имя из redirect URL (hash key).
-- Fix: в `Aria2Service.build_command_args` добавлен авто-вывод имени из исходного URL path для каждого item (если имя доступно), с приоритетом ручного override.
+- Symptom: РїСЂРё multi-queue Р·Р°РіСЂСѓР·РєРµ (РЅР°РїСЂРёРјРµСЂ, Hugging Face `?download=true`) С„Р°Р№Р»С‹ СЃРѕС…СЂР°РЅСЏР»РёСЃСЊ РєР°Рє РґР»РёРЅРЅС‹Рµ hash-СЃС‚СЂРѕРєРё РІРјРµСЃС‚Рѕ РѕР¶РёРґР°РµРјС‹С… РёРјС‘РЅ `.safetensors`.
+- Root cause: `-o` Р·Р°РґР°РІР°Р»СЃСЏ С‚РѕР»СЊРєРѕ РїСЂРё СЂСѓС‡РЅРѕРј `filename_override`; РїСЂРё РїР°РєРµС‚РЅРѕР№ РѕС‡РµСЂРµРґРё override РёРіРЅРѕСЂРёСЂРѕРІР°Р»СЃСЏ, Рё aria2 Р±СЂР°Р» РёРјСЏ РёР· redirect URL (hash key).
+- Fix: РІ `Aria2Service.build_command_args` РґРѕР±Р°РІР»РµРЅ Р°РІС‚Рѕ-РІС‹РІРѕРґ РёРјРµРЅРё РёР· РёСЃС…РѕРґРЅРѕРіРѕ URL path РґР»СЏ РєР°Р¶РґРѕРіРѕ item (РµСЃР»Рё РёРјСЏ РґРѕСЃС‚СѓРїРЅРѕ), СЃ РїСЂРёРѕСЂРёС‚РµС‚РѕРј СЂСѓС‡РЅРѕРіРѕ override.
 - Regression checks: `ruff`, `mypy`, `pytest`, rebuild portable, smoke launch exe.
-- Prevention rule: для URL с явным basename в path всегда передавать `-o <basename>` в aria2, чтобы redirect-URL не переименовывал файлы в hash.
+- Prevention rule: РґР»СЏ URL СЃ СЏРІРЅС‹Рј basename РІ path РІСЃРµРіРґР° РїРµСЂРµРґР°РІР°С‚СЊ `-o <basename>` РІ aria2, С‡С‚РѕР±С‹ redirect-URL РЅРµ РїРµСЂРµРёРјРµРЅРѕРІС‹РІР°Р» С„Р°Р№Р»С‹ РІ hash.
 
 ### 2026-03-27 - UI/UX upgrade batch implemented (menus/queue/settings)
 - Scope: queue column redesign, checkbox selection, drag-and-drop reorder, priority menu, status colors, File/Downloads/View/Settings menu layout, Import action move, open file/folder actions, logs visibility toggle and sort actions.
@@ -216,32 +216,32 @@ scripts\build_portable.ps1
 - 2026-03-27: Fixed top-menu overlap caused by visible service controls and added Progress accordion (Less/More).
 
 ### 2026-03-27 - Queue rows unreadable on dark theme
-- Symptom: в блоке очереди строки выглядели «белыми», содержимое было плохо читаемо (низкий контраст текста/фона).
-- Root cause: в `_append_or_update_row` для статуса `Queued` принудительно задавался фон `#ffffff`, а цвет текста не фиксировался; в dark theme текст оставался светлым.
-- Fix: дефолтный фон переведён на theme-aware `palette.base()`, добавлен авто-подбор `foreground` по контрасту и явная установка `cell.setForeground(...)`.
-- Regression checks: визуальная проверка очереди в dark theme, `ruff`, `mypy`, `pytest`.
-- Prevention rule: для таблиц Qt использовать palette-aware default colors; при кастомном фоне строки всегда задавать контрастный foreground.
+- Symptom: РІ Р±Р»РѕРєРµ РѕС‡РµСЂРµРґРё СЃС‚СЂРѕРєРё РІС‹РіР»СЏРґРµР»Рё В«Р±РµР»С‹РјРёВ», СЃРѕРґРµСЂР¶РёРјРѕРµ Р±С‹Р»Рѕ РїР»РѕС…Рѕ С‡РёС‚Р°РµРјРѕ (РЅРёР·РєРёР№ РєРѕРЅС‚СЂР°СЃС‚ С‚РµРєСЃС‚Р°/С„РѕРЅР°).
+- Root cause: РІ `_append_or_update_row` РґР»СЏ СЃС‚Р°С‚СѓСЃР° `Queued` РїСЂРёРЅСѓРґРёС‚РµР»СЊРЅРѕ Р·Р°РґР°РІР°Р»СЃСЏ С„РѕРЅ `#ffffff`, Р° С†РІРµС‚ С‚РµРєСЃС‚Р° РЅРµ С„РёРєСЃРёСЂРѕРІР°Р»СЃСЏ; РІ dark theme С‚РµРєСЃС‚ РѕСЃС‚Р°РІР°Р»СЃСЏ СЃРІРµС‚Р»С‹Рј.
+- Fix: РґРµС„РѕР»С‚РЅС‹Р№ С„РѕРЅ РїРµСЂРµРІРµРґС‘РЅ РЅР° theme-aware `palette.base()`, РґРѕР±Р°РІР»РµРЅ Р°РІС‚Рѕ-РїРѕРґР±РѕСЂ `foreground` РїРѕ РєРѕРЅС‚СЂР°СЃС‚Сѓ Рё СЏРІРЅР°СЏ СѓСЃС‚Р°РЅРѕРІРєР° `cell.setForeground(...)`.
+- Regression checks: РІРёР·СѓР°Р»СЊРЅР°СЏ РїСЂРѕРІРµСЂРєР° РѕС‡РµСЂРµРґРё РІ dark theme, `ruff`, `mypy`, `pytest`.
+- Prevention rule: РґР»СЏ С‚Р°Р±Р»РёС† Qt РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ palette-aware default colors; РїСЂРё РєР°СЃС‚РѕРјРЅРѕРј С„РѕРЅРµ СЃС‚СЂРѕРєРё РІСЃРµРіРґР° Р·Р°РґР°РІР°С‚СЊ РєРѕРЅС‚СЂР°СЃС‚РЅС‹Р№ foreground.
 
 ### 2026-03-27 - No sound playback in portable runtime
-- Symptom: в собранной portable-версии звуки start/success/failure не воспроизводились.
-- Root cause: `SoundService` зависел от одного `QMediaPlayer` и узкого пути ресурсов; в packaged runtime это приводило к silent-failure (особенно при быстрых событиях/вариантах расположения ресурсов).
-- Fix: реализован resilient sound pipeline: расширенный поиск ресурсов (`_MEIPASS`, `_internal`, `sys.executable`), отдельный player/audio-output на событие, обработка media errors с логированием.
-- Regression checks: `ruff`, `mypy`, `pytest` (включая обновлённые тесты `test_sound_service.py` для `_MEIPASS` и `_internal` fallback), пересборка portable.
-- Prevention rule: multimedia в packaged build должно иметь runtime-fallback пути и error logging; playback не должен зависеть от одного shared player.
+- Symptom: РІ СЃРѕР±СЂР°РЅРЅРѕР№ portable-РІРµСЂСЃРёРё Р·РІСѓРєРё start/success/failure РЅРµ РІРѕСЃРїСЂРѕРёР·РІРѕРґРёР»РёСЃСЊ.
+- Root cause: `SoundService` Р·Р°РІРёСЃРµР» РѕС‚ РѕРґРЅРѕРіРѕ `QMediaPlayer` Рё СѓР·РєРѕРіРѕ РїСѓС‚Рё СЂРµСЃСѓСЂСЃРѕРІ; РІ packaged runtime СЌС‚Рѕ РїСЂРёРІРѕРґРёР»Рѕ Рє silent-failure (РѕСЃРѕР±РµРЅРЅРѕ РїСЂРё Р±С‹СЃС‚СЂС‹С… СЃРѕР±С‹С‚РёСЏС…/РІР°СЂРёР°РЅС‚Р°С… СЂР°СЃРїРѕР»РѕР¶РµРЅРёСЏ СЂРµСЃСѓСЂСЃРѕРІ).
+- Fix: СЂРµР°Р»РёР·РѕРІР°РЅ resilient sound pipeline: СЂР°СЃС€РёСЂРµРЅРЅС‹Р№ РїРѕРёСЃРє СЂРµСЃСѓСЂСЃРѕРІ (`_MEIPASS`, `_internal`, `sys.executable`), РѕС‚РґРµР»СЊРЅС‹Р№ player/audio-output РЅР° СЃРѕР±С‹С‚РёРµ, РѕР±СЂР°Р±РѕС‚РєР° media errors СЃ Р»РѕРіРёСЂРѕРІР°РЅРёРµРј.
+- Regression checks: `ruff`, `mypy`, `pytest` (РІРєР»СЋС‡Р°СЏ РѕР±РЅРѕРІР»С‘РЅРЅС‹Рµ С‚РµСЃС‚С‹ `test_sound_service.py` РґР»СЏ `_MEIPASS` Рё `_internal` fallback), РїРµСЂРµСЃР±РѕСЂРєР° portable.
+- Prevention rule: multimedia РІ packaged build РґРѕР»Р¶РЅРѕ РёРјРµС‚СЊ runtime-fallback РїСѓС‚Рё Рё error logging; playback РЅРµ РґРѕР»Р¶РµРЅ Р·Р°РІРёСЃРµС‚СЊ РѕС‚ РѕРґРЅРѕРіРѕ shared player.
 
 ### 2026-03-27 - Portable audio silent despite packaged sound assets
-- Symptom: в очереди/завершении загрузки не слышны start/success/failure звуки, хотя mp3 присутствуют в `dist`.
-- Root cause: зависимость от Qt Multimedia backend без platform fallback приводила к silent-runtime кейсам на части Windows окружений.
-- Fix: `SoundService` дополнен Windows MCI fallback (mp3), runtime audio diagnostics `[AUDIO] ...`, усилен Qt playback setup (unmuted + volume 1.0) и сохранён multi-path resource resolve.
+- Symptom: РІ РѕС‡РµСЂРµРґРё/Р·Р°РІРµСЂС€РµРЅРёРё Р·Р°РіСЂСѓР·РєРё РЅРµ СЃР»С‹С€РЅС‹ start/success/failure Р·РІСѓРєРё, С…РѕС‚СЏ mp3 РїСЂРёСЃСѓС‚СЃС‚РІСѓСЋС‚ РІ `dist`.
+- Root cause: Р·Р°РІРёСЃРёРјРѕСЃС‚СЊ РѕС‚ Qt Multimedia backend Р±РµР· platform fallback РїСЂРёРІРѕРґРёР»Р° Рє silent-runtime РєРµР№СЃР°Рј РЅР° С‡Р°СЃС‚Рё Windows РѕРєСЂСѓР¶РµРЅРёР№.
+- Fix: `SoundService` РґРѕРїРѕР»РЅРµРЅ Windows MCI fallback (mp3), runtime audio diagnostics `[AUDIO] ...`, СѓСЃРёР»РµРЅ Qt playback setup (unmuted + volume 1.0) Рё СЃРѕС…СЂР°РЅС‘РЅ multi-path resource resolve.
 - Regression checks: `ruff`, `mypy`, `pytest` (`46 passed`), portable rebuild.
-- Prevention rule: для мультимедиа в desktop portable обязательно иметь backend fallback и явные runtime diagnostics в UI logs.
+- Prevention rule: РґР»СЏ РјСѓР»СЊС‚РёРјРµРґРёР° РІ desktop portable РѕР±СЏР·Р°С‚РµР»СЊРЅРѕ РёРјРµС‚СЊ backend fallback Рё СЏРІРЅС‹Рµ runtime diagnostics РІ UI logs.
 
 ### 2026-03-27 - Sound triggers skipped due shared queue-item mutation
-- Symptom: в Logs отсутствовали строки `[AUDIO]`, звуки старта/успеха/ошибки не воспроизводились.
-- Root cause: `Aria2Service` и UI разделяли один и тот же экземпляр `QueueItem`; статус мутировал в сервисе до обработки сигнала в UI, поэтому `previous_status` == `new_status` и sound-trigger блок не срабатывал.
-- Fix: в `Aria2Service.enqueue_items` введено копирование `QueueItem` (`dataclasses.replace`) для изоляции service-state от UI-state; в UI добавлены явные лог-записи `[AUDIO] Trigger ...`.
+- Symptom: РІ Logs РѕС‚СЃСѓС‚СЃС‚РІРѕРІР°Р»Рё СЃС‚СЂРѕРєРё `[AUDIO]`, Р·РІСѓРєРё СЃС‚Р°СЂС‚Р°/СѓСЃРїРµС…Р°/РѕС€РёР±РєРё РЅРµ РІРѕСЃРїСЂРѕРёР·РІРѕРґРёР»РёСЃСЊ.
+- Root cause: `Aria2Service` Рё UI СЂР°Р·РґРµР»СЏР»Рё РѕРґРёРЅ Рё С‚РѕС‚ Р¶Рµ СЌРєР·РµРјРїР»СЏСЂ `QueueItem`; СЃС‚Р°С‚СѓСЃ РјСѓС‚РёСЂРѕРІР°Р» РІ СЃРµСЂРІРёСЃРµ РґРѕ РѕР±СЂР°Р±РѕС‚РєРё СЃРёРіРЅР°Р»Р° РІ UI, РїРѕСЌС‚РѕРјСѓ `previous_status` == `new_status` Рё sound-trigger Р±Р»РѕРє РЅРµ СЃСЂР°Р±Р°С‚С‹РІР°Р».
+- Fix: РІ `Aria2Service.enqueue_items` РІРІРµРґРµРЅРѕ РєРѕРїРёСЂРѕРІР°РЅРёРµ `QueueItem` (`dataclasses.replace`) РґР»СЏ РёР·РѕР»СЏС†РёРё service-state РѕС‚ UI-state; РІ UI РґРѕР±Р°РІР»РµРЅС‹ СЏРІРЅС‹Рµ Р»РѕРі-Р·Р°РїРёСЃРё `[AUDIO] Trigger ...`.
 - Regression checks: `ruff`, `mypy`, `pytest` (`47 passed`), portable rebuild.
-- Prevention rule: состояние доменной модели между worker/service и UI должно быть изолировано; shared mutable objects для статусных событий запрещены.
+- Prevention rule: СЃРѕСЃС‚РѕСЏРЅРёРµ РґРѕРјРµРЅРЅРѕР№ РјРѕРґРµР»Рё РјРµР¶РґСѓ worker/service Рё UI РґРѕР»Р¶РЅРѕ Р±С‹С‚СЊ РёР·РѕР»РёСЂРѕРІР°РЅРѕ; shared mutable objects РґР»СЏ СЃС‚Р°С‚СѓСЃРЅС‹С… СЃРѕР±С‹С‚РёР№ Р·Р°РїСЂРµС‰РµРЅС‹.
 
 
 ### 2026-03-28 - Queue drag-and-drop corrupted rows/selection (row loss, naming mismatch)
@@ -305,3 +305,9 @@ scripts\build_portable.ps1
 - Root cause: malformed textual replacement inserted literal escape tokens into test source and one localization write pass used unsafe encoding flow.
 - Fix: rewrote affected files in explicit UTF-8, restored clean Python syntax, re-ran full test suite.
 - Prevention rule: for Python source writes use explicit UTF-8 output and avoid inline escape-token replacements inside code lists.
+### 2026-03-28 - Cross-platform packaging pipeline (Windows x64 + Ubuntu x64)
+- Implemented standardized artifact naming with version/platform/arch in filename.
+- Added Linux packaging script and GitHub Actions matrix workflow for Windows x64 and Ubuntu x64.
+- Added release automation on tag push (`v*`) to attach generated artifacts to GitHub Release.
+- Update service asset selection upgraded to runtime OS/arch-aware matching.
+- Windows x86 target marked deferred due current PySide6/Qt6 stack limitation.
