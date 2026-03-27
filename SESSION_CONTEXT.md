@@ -285,3 +285,10 @@ scripts\build_portable.ps1
 - Tests added: widget-level DnD tests (`tests/test_queue_dragdrop_widget.py`) + existing queue DnD regression suite.
 - Prevention rule: DnD event-handlers ??????? ????????? `viewport` source ??? item views; ????? DnD fix/update ?????????????? widget-level ? domain-level ??????? ?? ??????.
 
+
+### 2026-03-28 - Start button regression: queue did not start due broken options builder
+- Symptom: clicking `Start` did nothing (queue did not launch).
+- Root cause: `_build_download_options()` contained a malformed/decompiled code path and failed at runtime before `aria2_service.start()`.
+- Fix: rewrote `_build_download_options()` to a deterministic implementation using `_resolve_auth_payload(...)` and explicit `DownloadOptions(...)` mapping.
+- Regression checks: added `tests/test_main_window_download_options.py` to validate payload construction and prevent silent runtime breakage; full `pytest` required before build.
+- Prevention rule: every change in start-path methods (`_start_queue`, `_build_download_options`, auth resolution) must be covered by a focused unit test.

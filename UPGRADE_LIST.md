@@ -34,3 +34,4 @@ Constraints:
 25. Add drag'n'drop regression tests (row-loss guard + MIME row decode/encode checks) (`done`)
 26. Add widget-level drag'n'drop tests (viewport source + mime drop path) (`done`)
 
+27. Fix `Start` regression in `_build_download_options` and add dedicated start-path regression test (`done`)

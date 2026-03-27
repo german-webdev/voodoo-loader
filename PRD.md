@@ -499,3 +499,8 @@ This program is mandatory and tracked in `UPGRADE_LIST.md`.
 
 ### 14.6 Delivery constraint
 - Final release build must not be produced until all upgrade items are implemented and verified.
+
+### 14.7 Mandatory regression coverage for updates
+- Every feature/update that changes behavior must ship with automated tests before build.
+- Critical start path (`_build_download_options`, auth resolution, `_start_queue`) requires dedicated regression tests.
+- Portable build is allowed only after green full test suite.

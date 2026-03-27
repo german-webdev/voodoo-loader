@@ -1111,36 +1111,29 @@ class MainWindow(QMainWindow):
             username.strip() if save_credentials else "",
         )
 
-    def _build_download_options(self):
+    def _build_download_options(self) -> DownloadOptions:
         headers_raw = self.headers_input.toPlainText().splitlines()
-        __temp_831, __temp_832, __temp_833, __temp_834 = self._resolve_auth_payload(
-            self._current_auth_mode(), self.token_input.text(), self.username_input
-            .text(), self.password_input.text(), headers_raw)
-        token = __temp_831
-        username = __temp_832
-        password = __temp_833
-        auth_headers = __temp_834
-        __temp_836 = self.destination_combo.currentText().strip()
-        __temp_838 = max(1, int(self.settings.connections))
-        __temp_840 = max(1, int(self.settings.splits))
-        if not self.settings.chunk_size.strip():
-            __temp_842 = self.settings.user_agent.strip()
-        else:
-            self.settings.user_agent.strip()
-        if not __temp_842:
-            return DownloadOptions(destination=__temp_836, connections=__temp_838,
-                splits=__temp_840, chunk_size='1M', user_agent='Mozilla/5.0',
-                continue_download=bool(self.settings.continue_download), token=
-                token, username=username, password=password, custom_headers=
-                auth_headers, max_concurrent_downloads=int(self.settings.
-                max_concurrent_downloads))
-        else:
-            return DownloadOptions(destination=__temp_836, connections=__temp_838,
-                splits=__temp_840, chunk_size='1M', user_agent=__temp_842,
-                continue_download=bool(self.settings.continue_download), token=
-                token, username=username, password=password, custom_headers=
-                auth_headers, max_concurrent_downloads=int(self.settings.
-                max_concurrent_downloads))
+        token, username, password, auth_headers = self._resolve_auth_payload(
+            self._current_auth_mode(),
+            self.token_input.text(),
+            self.username_input.text(),
+            self.password_input.text(),
+            headers_raw,
+        )
+
+        return DownloadOptions(
+            destination=self.destination_combo.currentText().strip(),
+            connections=max(1, int(self.settings.connections)),
+            splits=max(1, int(self.settings.splits)),
+            chunk_size=self.settings.chunk_size.strip() or "1M",
+            user_agent=self.settings.user_agent.strip() or "Mozilla/5.0",
+            continue_download=bool(self.settings.continue_download),
+            token=token,
+            username=username,
+            password=password,
+            custom_headers=auth_headers,
+            max_concurrent_downloads=int(self.settings.max_concurrent_downloads),
+        )
 
     def _start_queue(self):
         if self.aria2_service.is_running:
@@ -1505,7 +1498,7 @@ class MainWindow(QMainWindow):
             self.queue_table.setItem(row, COL_ID, QTableWidgetItem(item.item_id))
             select_item = self.queue_table.item(row, COL_SELECT)
         if select_item is None:
-            select_item = QTableWidgetItem(self.t('queue_select_item'))
+            select_item = QTableWidgetItem('')
             select_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.
                 ItemIsSelectable | Qt.ItemFlag.ItemIsUserCheckable)
             self.queue_table.setItem(row, COL_SELECT, select_item)
@@ -2163,4 +2156,5 @@ class MainWindow(QMainWindow):
         if m:
             return f"{m}m {s}s"
         return f"{s}s"
+
 
