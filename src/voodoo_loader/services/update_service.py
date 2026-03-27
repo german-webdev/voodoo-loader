@@ -5,6 +5,7 @@ import json
 import os
 import platform
 import re
+import shutil
 import subprocess
 import tempfile
 import urllib.error
@@ -448,8 +449,9 @@ class UpdateService:
                     "  }",
                     "",
                     "  Write-Log ('Copying updated files from: ' + $sourceRoot)",
-                    "  Get-ChildItem -LiteralPath $sourceRoot -Force | ForEach-Object {",
-                    "    Copy-Item -LiteralPath $_.FullName -Destination $InstallDir -Recurse -Force",
+                    "  $copyProc = Start-Process -FilePath 'robocopy.exe' -ArgumentList @($sourceRoot, $InstallDir, '/E', '/R:5', '/W:1', '/NFL', '/NDL', '/NJH', '/NJS', '/NP') -Wait -PassThru",
+                    "  if ($copyProc.ExitCode -gt 7) {",
+                    "    throw ('Robocopy failed with exit code ' + $copyProc.ExitCode)",
                     "  }",
                     "",
                     "  $launchPath = Resolve-LaunchPath -InstallDir $InstallDir -ExePath $ExePath -ExtractRoot $extractRoot",
@@ -489,9 +491,14 @@ class UpdateService:
         detached_process = int(getattr(subprocess, "DETACHED_PROCESS", 0x00000008))
         creation_flags = create_new_process_group | detached_process
 
+        windows_powershell = Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32" / "WindowsPowerShell" / "v1.0" / "powershell.exe"
+        powershell_exe = str(windows_powershell) if windows_powershell.is_file() else (shutil.which("powershell") or shutil.which("pwsh"))
+        if not powershell_exe:
+            raise RuntimeError("PowerShell executable was not found")
+
         subprocess.Popen(
             [
-                "powershell",
+                powershell_exe,
                 "-NoProfile",
                 "-ExecutionPolicy",
                 "Bypass",
@@ -509,7 +516,7 @@ class UpdateService:
                 str(parent_pid),
             ],
             creationflags=creation_flags,
-            close_fds=True,
+            close_fds=False,
             cwd=str(install_dir),
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,

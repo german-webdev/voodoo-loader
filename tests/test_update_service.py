@@ -164,7 +164,8 @@ def test_launch_windows_updater_generates_relaunch_script(monkeypatch) -> None:
     assert "Start-Process -FilePath $launchPath -WorkingDirectory $workingDir" in script_text
     assert "Write-Log 'Updater started'" in script_text
     assert "Resolve-LaunchPath" in script_text
-    assert "Copy-Item -LiteralPath $_.FullName -Destination $InstallDir -Recurse -Force" in script_text
+    assert "robocopy.exe" in script_text
+    assert "Robocopy failed with exit code" in script_text
     assert "Write-Log ('Updater failed: ' + $_.Exception.Message)" in script_text
 
     kwargs = captured.get("kwargs")

@@ -14,6 +14,10 @@
 
 ### Fixes
 - Reworked updater script to:
+- Added updater launch hardening:
+  - explicit Windows PowerShell executable resolution (`SystemRoot` fallback to `powershell`/`pwsh`)
+  - robust file replacement using `robocopy` with retries and exit-code validation
+  - disabled `close_fds` for detached updater process compatibility on Windows
   - extract into temporary `unpacked` directory
   - normalize source root (flat or nested archive layout)
   - copy files into install dir explicitly
