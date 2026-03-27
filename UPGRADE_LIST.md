@@ -32,4 +32,5 @@ Constraints:
 23. Recovered accidental `main_window.py` truncation and restored implementation parity (`done`)
 24. Queue drag'n'drop stability hardening: CopyAction DnD + model-safe reorder (`done`)
 25. Add drag'n'drop regression tests (row-loss guard + MIME row decode/encode checks) (`done`)
+26. Add widget-level drag'n'drop tests (viewport source + mime drop path) (`done`)
 

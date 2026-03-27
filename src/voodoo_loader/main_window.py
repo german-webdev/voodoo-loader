@@ -113,6 +113,9 @@ class QueueTableWidget(QTableWidget):
 
         return []
 
+    def _is_internal_drag_source(self, source: object) -> bool:
+        return source is self or source is self.viewport()
+
     def startDrag(self, _supported_actions) -> None:  # noqa: N802
         rows = self._drag_rows()
         if not rows:
@@ -126,19 +129,19 @@ class QueueTableWidget(QTableWidget):
         drag.exec(Qt.DropAction.MoveAction)
 
     def dragEnterEvent(self, event) -> None:  # noqa: N802
-        if event.source() is self and event.mimeData().hasFormat(self.DRAG_ROWS_MIME):
+        if self._is_internal_drag_source(event.source()) and event.mimeData().hasFormat(self.DRAG_ROWS_MIME):
             event.acceptProposedAction()
             return
         super().dragEnterEvent(event)
 
     def dragMoveEvent(self, event) -> None:  # noqa: N802
-        if event.source() is self and event.mimeData().hasFormat(self.DRAG_ROWS_MIME):
+        if self._is_internal_drag_source(event.source()) and event.mimeData().hasFormat(self.DRAG_ROWS_MIME):
             event.acceptProposedAction()
             return
         super().dragMoveEvent(event)
 
     def dropEvent(self, event) -> None:  # noqa: N802
-        if event.source() is not self or not event.mimeData().hasFormat(self.DRAG_ROWS_MIME):
+        if not self._is_internal_drag_source(event.source()) or not event.mimeData().hasFormat(self.DRAG_ROWS_MIME):
             super().dropEvent(event)
             return
 

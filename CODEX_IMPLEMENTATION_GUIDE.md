@@ -13,6 +13,7 @@ Use this workflow:
 3. Ask Codex to read `PRD.md` and `CODEX.md` before writing code.
 4. Build the app incrementally in milestones.
 5. Review each milestone before moving to the next one.
+6. Every feature and every update must ship with automated tests (unit/integration/UI-level where applicable). No release build is allowed with missing coverage for changed behavior.
 
 Do not ask Codex to generate the entire finished application in a single prompt.
 
@@ -371,4 +372,15 @@ Verification gate for each completed upgrade item:
 - queue/context actions available in both context menu and `Downloads` menu (where required)
 - tests updated or added for changed behavior
 
+
+## 7. Definition of Done (mandatory quality gate)
+
+A task is considered done only when all of the following are true:
+1. Behavior is implemented and reviewed.
+2. Automated tests are added/updated for the changed behavior.
+3. Local test run is green (`pytest`).
+4. Lint/type checks are green (`ruff`, `mypy` when applicable).
+5. Incidents/regressions are documented in project context if the fix addresses a bug.
+
+Build/release must be blocked if a feature/update is not covered by tests.
 
