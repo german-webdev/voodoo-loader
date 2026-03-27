@@ -29,7 +29,6 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from voodoo_loader.models.app_settings import AppSettings
 from voodoo_loader.models.download_options import DownloadOptions
 from voodoo_loader.models.queue_item import QueueItem, QueueItemPriority, QueueItemStatus
 from voodoo_loader.services import (
@@ -731,31 +730,28 @@ class MainWindow(QMainWindow):
         if restored > 0:
             self._append_log(f"[INFO] Restored {restored} queued item(s) from previous session")
 
-    def _save_queue_snapshot(self):
-        snapshot = []
-        for __temp_619 in iter(self.queue_order):
-            item_id = __temp_619
+    def _save_queue_snapshot(self) -> None:
+        snapshot: list[dict[str, str]] = []
+        for item_id in self.queue_order:
             item = self.queue_items.get(item_id)
             if item is None:
                 continue
-                __temp_621 = {QueueItemStatus.QUEUED, QueueItemStatus.STARTING,
-                    QueueItemStatus.DOWNLOADING, QueueItemStatus.PAUSED}
-            else:
-                {QueueItemStatus.QUEUED, QueueItemStatus.STARTING, QueueItemStatus.
-                    DOWNLOADING, QueueItemStatus.PAUSED}
-            if not item.status in __temp_621:
-                continue
-            if not item.filename_override:
-                snapshot.append({url: item.url, destination: item.destination,
-                    filename_override: '', priority: item.priority.value})
-            else:
-                snapshot.append({url: item.url, destination: item.destination,
-                    filename_override: item.filename_override, priority: item.
-                    priority.value})
-            continue
+            if item.status in {
+                QueueItemStatus.QUEUED,
+                QueueItemStatus.STARTING,
+                QueueItemStatus.DOWNLOADING,
+                QueueItemStatus.PAUSED,
+            }:
+                snapshot.append(
+                    {
+                        "url": item.url,
+                        "destination": item.destination,
+                        "filename_override": item.filename_override or "",
+                        "priority": item.priority.value,
+                    }
+                )
         self.settings.persisted_queue = snapshot
         self.settings_service.save(self.settings)
-        return None
 
     def _apply_single_item_filename_override(self, items, log_if_ignored):
         override_name = self.filename_input.text().strip()
@@ -849,10 +845,10 @@ class MainWindow(QMainWindow):
     def _auth_mode_hint_key(mode):
         normalized = MainWindow._normalize_auth_mode(mode)
         if normalized == AUTH_MODE_TOKEN:
-            return auth_mode_help_token
+            return "auth_mode_help_token"
         if normalized == AUTH_MODE_BASIC:
-            return auth_mode_help_basic
-        return auth_mode_help_none
+            return "auth_mode_help_basic"
+        return "auth_mode_help_none"
 
     def _current_auth_mode(self):
         __temp_701 = self.auth_mode_combo.currentData()
