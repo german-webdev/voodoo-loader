@@ -334,3 +334,11 @@ scripts\build_portable.ps1
 - Fix: added apt installation of libegl1, libpulse0, libgl1, libxkbcommon0, libxkbcommon-x11-0, libdbus-1-3; set QT_QPA_PLATFORM=offscreen for headless CI run.
 - Prevention rule: every Linux CI job importing Qt/PySide modules must install system shared libraries before pytest collection.
 
+
+### 2026-03-28 - Auto-tag workflow for master merges
+- Added .github/workflows/auto-tag-on-master.yml triggered by push to master.
+- Workflow computes next `vX.Y.Z-alpha` tag from latest alpha tag, creates annotated tag, and pushes it to origin.
+- Safety guards: skip when current commit already tagged; optional commit markers [skip-tag] / [no-tag]; retry loop for concurrent push races.
+- Result: merge to master now auto-produces a release tag, which then triggers Build Portable Matrix and GitHub Release flow via existing push.tags: v* rule.
+
+
