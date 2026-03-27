@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-DEFAULT_GITHUB_REPOSITORY = os.getenv("VOODOO_LOADER_GITHUB_REPOSITORY", "")
+DEFAULT_GITHUB_REPOSITORY = os.getenv("VOODOO_LOADER_GITHUB_REPOSITORY", "german-webdev/voodoo-loader")
 
 
 @dataclass(slots=True)
@@ -438,3 +438,4 @@ class UpdateService:
             creationflags=creation_flags,
             close_fds=True,
         )
+

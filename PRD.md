@@ -580,3 +580,10 @@ This program is mandatory and tracked in `UPGRADE_LIST.md`.
 - Auto-tag job must support race-safe retries when concurrent pushes happen.
 - Tag push must trigger release build workflow (`Build Portable Matrix`) via existing `push.tags: v*` rule.
 - Optional skip marker in commit message: `[skip-tag]` or `[no-tag]`.
+
+## 19. Default Update Repository Behavior
+
+- Fresh installations (including portable builds) must have a valid default GitHub update repository configured automatically.
+- Manual repository override remains supported via settings and environment variable (VOODOO_LOADER_GITHUB_REPOSITORY).
+- Update check UX must not fail with epository not configured on a default install.
+

@@ -117,3 +117,9 @@ def test_pick_asset_prefers_linux_tarball_for_linux_target() -> None:
 
     assert name.endswith("linux-ubuntu-22.04-x64-portable.tar.gz")
     assert url == "https://example.com/linux.tar.gz"
+
+
+def test_default_repository_is_configured() -> None:
+    service = UpdateService()
+    assert service.repository.strip() != ""
+    assert "/" in service.repository

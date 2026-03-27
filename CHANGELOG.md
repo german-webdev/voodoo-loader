@@ -12,6 +12,7 @@ The format follows Keep a Changelog principles and Semantic Versioning.
 - CI workflow `.github/workflows/qa-gate.yml` for pull requests and pushes to `master`/`dev/**`.
 
 ### Changed
+- Default update repository fallback is now preconfigured for portable/local builds; update check works without manual repository setup.
 - Development workflow now enforces QA-before-push and QA-before-merge via local hooks and GitHub checks.
 - Portable artifact naming now includes version, OS, architecture, and package type.
 - In-app updater asset selection now prefers runtime OS/architecture specific release files.
@@ -33,6 +34,7 @@ The format follows Keep a Changelog principles and Semantic Versioning.
 - Update service with semantic version comparison and optional SHA256 verification.
 
 ### Changed
+- Default update repository fallback is now preconfigured for portable/local builds; update check works without manual repository setup.
 - Product naming unified to `Voodoo Loader`.
 - Menu layout standardized: File / Downloads / View / Settings / Help.
 - Start-path reliability hardening for download options creation.
@@ -47,3 +49,4 @@ The format follows Keep a Changelog principles and Semantic Versioning.
 ### Known Issues
 - Update repository must be configured (`VOODOO_LOADER_GITHUB_REPOSITORY` env var or `update_repository` in settings) before in-app updater can query releases.
 - GitHub API rate-limits can temporarily block update checks.
+
