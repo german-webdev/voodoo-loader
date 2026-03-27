@@ -49,3 +49,4 @@ Constraints:
 36. Update relaunch hardening: updater working directory + retry loop + manual fallback message (done)
 37. Add regression tests for update launcher and runtime version resolution (done)
 38. Progress bar visual refresh: height 10px + chunk color #00BB0A (done)
+39. CI auto-release hardening: auto-tag -> explicit build/release dispatch by tag (done)

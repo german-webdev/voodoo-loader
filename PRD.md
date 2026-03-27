@@ -578,7 +578,10 @@ This program is mandatory and tracked in `UPGRADE_LIST.md`.
 - On every push to `master` (merge flow), CI must create and push the next semantic pre-release tag in format `vX.Y.Z-alpha`.
 - Tag creation must be idempotent: if current commit already has a version tag, job exits without creating a duplicate.
 - Auto-tag job must support race-safe retries when concurrent pushes happen.
-- Tag push must trigger release build workflow (`Build Portable Matrix`) via existing `push.tags: v*` rule.
+- Release build workflow must be triggerable by both:
+  - `push.tags: v*`
+  - explicit `workflow_dispatch` with `tag_name` input (fallback/recovery path)
+- Auto-tag workflow must dispatch release build explicitly for resolved tag (`new` or `existing on HEAD`) to avoid skipped chains.
 - Optional skip marker in commit message: `[skip-tag]` or `[no-tag]`.
 
 ## 19. Update Reliability and Version Synchronization
