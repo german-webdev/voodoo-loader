@@ -456,7 +456,7 @@ This program is mandatory and tracked in `UPGRADE_LIST.md`.
 ### 14.1 Queue and list UX
 - Remove `Destination` from queue table.
 - Show per-item total size in queue table.
-- Add localized queue block title (`Queue downloads` / `Р С›РЎвЂЎР ВµРЎР‚Р ВµР Т‘РЎРЉ Р В·Р В°Р С”Р В°РЎвЂЎР ВµР С”`).
+- Add localized queue block title (`Queue downloads` / `Р В Р’В Р РЋРІР‚С”Р В Р Р‹Р Р†Р вЂљР Р‹Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’ВµР В Р’В Р СћРІР‚ВР В Р Р‹Р В Р вЂ° Р В Р’В Р вЂ™Р’В·Р В Р’В Р вЂ™Р’В°Р В Р’В Р РЋРІР‚СњР В Р’В Р вЂ™Р’В°Р В Р Р‹Р Р†Р вЂљР Р‹Р В Р’В Р вЂ™Р’ВµР В Р’В Р РЋРІР‚Сњ`).
 - Add item checkbox selection and `Select all` control.
 - Add status color coding:
   - failed = red
@@ -477,7 +477,7 @@ This program is mandatory and tracked in `UPGRADE_LIST.md`.
 
 ### 14.3 Settings migration
 - Move aria2 tuning options from inline panel to `Settings` dialog.
-- Rename inline speed block to `Speed` / `Р СџРЎР‚Р ВµРЎРѓР ВµРЎвЂљРЎвЂ№ РЎРѓР С”Р С•РЎР‚Р С•РЎРѓРЎвЂљР С‘`.
+- Rename inline speed block to `Speed` / `Р В Р’В Р РЋРЎСџР В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РЎвЂњР В Р’В Р вЂ™Р’ВµР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р Р†Р вЂљРІвЂћвЂ“ Р В Р Р‹Р В РЎвЂњР В Р’В Р РЋРІР‚СњР В Р’В Р РЋРІР‚СћР В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚СћР В Р Р‹Р В РЎвЂњР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р РЋРІР‚В`.
 - Move `Continue / Resume (-c)` into `Settings` and provide an explanatory hint.
 - Move authentication controls into `Settings` dialog.
 
@@ -506,10 +506,10 @@ This program is mandatory and tracked in `UPGRADE_LIST.md`.
 - Portable build is allowed only after green full test suite.
 
 ### 14.8 Help Menu and In-App Update Flow
-- Add top-level menu `Help` / `РџРѕРјРѕС‰СЊ` after `Settings`.
+- Add top-level menu `Help` / `Р В РЎСџР В РЎвЂўР В РЎВР В РЎвЂўР РЋРІР‚В°Р РЋР Р‰` after `Settings`.
 - `Help` must include two modal actions:
-  - `Check Voodoo Loader updates` / `РџСЂРѕРІРµСЂРёС‚СЊ РѕР±РЅРѕРІР»РµРЅРёРµ Voodoo Loader`
-  - `About` / `Рћ РїСЂРѕРіСЂР°РјРјРµ`
+  - `Check Voodoo Loader updates` / `Р В РЎСџР РЋР вЂљР В РЎвЂўР В Р вЂ Р В Р’ВµР РЋР вЂљР В РЎвЂР РЋРІР‚С™Р РЋР Р‰ Р В РЎвЂўР В Р’В±Р В Р вЂ¦Р В РЎвЂўР В Р вЂ Р В Р’В»Р В Р’ВµР В Р вЂ¦Р В РЎвЂР В Р’Вµ Voodoo Loader`
+  - `About` / `Р В РЎвЂє Р В РЎвЂ”Р РЋР вЂљР В РЎвЂўР В РЎвЂ“Р РЋР вЂљР В Р’В°Р В РЎВР В РЎВР В Р’Вµ`
 - Update-check modal flow:
   1. Show blocking modal state `Checking for updates...`.
   2. Query GitHub Releases API for configured repository.
@@ -580,3 +580,39 @@ This program is mandatory and tracked in `UPGRADE_LIST.md`.
 - Auto-tag job must support race-safe retries when concurrent pushes happen.
 - Tag push must trigger release build workflow (`Build Portable Matrix`) via existing `push.tags: v*` rule.
 - Optional skip marker in commit message: `[skip-tag]` or `[no-tag]`.
+
+## 19. Update Reliability and Version Synchronization
+
+### 19.1 Runtime version source of truth
+- Runtime version resolution order:
+  1. `VOODOO_LOADER_APP_VERSION` env var
+  2. frozen-bundle file next to executable: `voodoo_loader_version.txt`
+  3. fallback package default version
+- This prevents stale version display in portable builds after tag/release updates.
+
+### 19.2 Build-time version stamping
+- Portable build scripts (Windows and Linux) must resolve version in strict order:
+  1. `VOODOO_LOADER_BUILD_VERSION` (CI/tag source)
+  2. latest git tag (`v*`)
+  3. package runtime version fallback
+- Build output must always include `voodoo_loader_version.txt` in portable bundle root.
+
+### 19.3 Update UX requirements
+- Update check and update apply stages must use a blocking modal with visible loader/progress indicator and status text.
+- Empty/blank progress windows are not allowed.
+- Status text examples: `Checking for updates`, `Downloading update package`, `Applying update`.
+
+### 19.4 Update restart behavior
+- After applying update, app attempts automatic relaunch via external updater process.
+- Updater process must relaunch with explicit working directory and retry policy.
+- User notification must include manual fallback instruction if auto-restart does not occur.
+
+### 19.5 Regression coverage
+- Mandatory tests for update reliability include:
+  - runtime version resolution (env/frozen file/default)
+  - updater launcher script generation and relaunch command expectations
+### 19.6 Progress bar visual specification
+- Main progress bar must not render as a thin 1-2 px line.
+- Required height: `10px` (acceptable range 8-10 px).
+- Progress chunk/fill color: `#00BB0A`.
+- Same style should be reused for update busy loader progress to keep visual consistency.

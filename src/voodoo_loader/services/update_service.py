@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-DEFAULT_GITHUB_REPOSITORY = os.getenv("VOODOO_LOADER_GITHUB_REPOSITORY", "")
+DEFAULT_GITHUB_REPOSITORY = os.getenv("VOODOO_LOADER_GITHUB_REPOSITORY", "german-webdev/voodoo-loader")
 
 
 @dataclass(slots=True)
@@ -402,14 +402,36 @@ class UpdateService:
                     "  [int]$ParentPid",
                     ")",
                     "$ErrorActionPreference = 'Stop'",
+                    "$workingDir = Split-Path -Parent $ExePath",
+                    "$updaterLog = Join-Path $InstallDir 'voodoo_loader_updater.log'",
+                    "function Write-Log([string]$Message) {",
+                    "  $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'",
+                    "  Add-Content -LiteralPath $updaterLog -Value \"[$timestamp] $Message\"",
+                    "}",
+                    "Write-Log 'Updater started'",
                     "for ($i = 0; $i -lt 240; $i++) {",
                     "  if (-not (Get-Process -Id $ParentPid -ErrorAction SilentlyContinue)) { break }",
                     "  Start-Sleep -Milliseconds 500",
                     "}",
+                    "Write-Log 'Parent process exited; applying update archive'",
                     "Expand-Archive -LiteralPath $ZipPath -DestinationPath $InstallDir -Force",
+                    "$started = $false",
+                    "for ($i = 0; $i -lt 5; $i++) {",
+                    "  try {",
+                    "    Start-Process -FilePath $ExePath -WorkingDirectory $workingDir",
+                    "    $started = $true",
+                    "    break",
+                    "  } catch {",
+                    "    Start-Sleep -Milliseconds 750",
+                    "  }",
+                    "}",
+                    "if ($started) {",
+                    "  Write-Log 'Relaunch requested successfully'",
+                    "} else {",
+                    "  Write-Log 'Relaunch request failed; user should start app manually'",
+                    "}",
                     "Remove-Item -LiteralPath $ZipPath -Force -ErrorAction SilentlyContinue",
                     "Remove-Item -LiteralPath $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue",
-                    "Start-Process -FilePath $ExePath",
                 ]
             ),
             encoding="utf-8",
@@ -437,4 +459,12 @@ class UpdateService:
             ],
             creationflags=creation_flags,
             close_fds=True,
+            cwd=str(install_dir),
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
         )
+
+
+
+

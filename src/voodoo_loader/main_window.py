@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
     QComboBox,
+    QDialog,
     QFileDialog,
     QFormLayout,
     QGroupBox,
@@ -23,7 +24,6 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QProgressBar,
     QPushButton,
-    QProgressDialog,
     QSpinBox,
     QSplitter,
     QTableWidget,
@@ -77,6 +77,20 @@ PRIORITY_ORDER = {
     QueueItemPriority.LOW: 2,
 }
 
+
+GLOBAL_PROGRESS_HEIGHT_PX = 10
+GLOBAL_PROGRESS_CHUNK_COLOR = "#00BB0A"
+GLOBAL_PROGRESS_STYLESHEET = (
+    "QProgressBar {"
+    " border: 1px solid #333333;"
+    " border-radius: 5px;"
+    " background-color: #1f1f1f;"
+    " }"
+    " QProgressBar::chunk {"
+    " background-color: #00BB0A;"
+    " border-radius: 5px;"
+    " }"
+)
 
 class QueueTableWidget(QTableWidget):
     rows_dropped = Signal(list, int)
@@ -354,6 +368,9 @@ class MainWindow(QMainWindow):
         self.global_progress = QProgressBar(progress_box)
         self.global_progress.setRange(0, 100)
         self.global_progress.setValue(0)
+        self.global_progress.setFixedHeight(GLOBAL_PROGRESS_HEIGHT_PX)
+        self.global_progress.setTextVisible(False)
+        self.global_progress.setStyleSheet(GLOBAL_PROGRESS_STYLESHEET)
         progress_layout.addWidget(self.global_progress)
         self.progress_details_widget = QWidget(progress_box)
         progress_details_layout = QVBoxLayout(self.progress_details_widget)
@@ -1981,24 +1998,54 @@ class MainWindow(QMainWindow):
     def _show_about_dialog(self) -> None:
         QMessageBox.information(self, self.t('about_title'), self.t('about_text', version=__version__))
 
+    def _show_busy_update_dialog(self, message: str) -> QDialog:
+        dialog = QDialog(self)
+        dialog.setWindowTitle(self.t('update_title'))
+        dialog.setWindowModality(Qt.WindowModality.ApplicationModal)
+        dialog.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
+        dialog.setWindowFlag(Qt.WindowType.WindowCloseButtonHint, False)
+        dialog.setMinimumWidth(360)
+
+        layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(10)
+
+        label = QLabel(message, dialog)
+        label.setWordWrap(True)
+
+        progress = QProgressBar(dialog)
+        progress.setRange(0, 0)
+        progress.setTextVisible(False)
+        progress.setFixedHeight(GLOBAL_PROGRESS_HEIGHT_PX)
+        progress.setStyleSheet(GLOBAL_PROGRESS_STYLESHEET)
+
+        layout.addWidget(label)
+        layout.addWidget(progress)
+
+        dialog.show()
+        QApplication.processEvents()
+        return dialog
+
+    @staticmethod
+    def _close_busy_update_dialog(dialog: QDialog | None) -> None:
+        if dialog is None:
+            return
+        dialog.close()
+        dialog.deleteLater()
+
     def _show_update_dialog(self) -> None:
         if self.aria2_service.is_running:
             QMessageBox.warning(self, self.t('update_title'), self.t('update_running_blocked'))
             return
 
-        progress = QProgressDialog(self.t('update_checking'), '', 0, 0, self)
-        progress.setWindowTitle(self.t('update_title'))
-        progress.setCancelButton(None)
-        progress.setWindowModality(Qt.WindowModality.ApplicationModal)
-        progress.setMinimumDuration(0)
-        progress.show()
-        QApplication.processEvents()
-
-        result = self.update_service.check_for_updates(
-            current_version=__version__,
-            repository=self.settings.update_repository,
-        )
-        progress.close()
+        busy_dialog = self._show_busy_update_dialog(self.t('update_checking'))
+        try:
+            result = self.update_service.check_for_updates(
+                current_version=__version__,
+                repository=self.settings.update_repository,
+            )
+        finally:
+            self._close_busy_update_dialog(busy_dialog)
 
         if result.error:
             QMessageBox.warning(self, self.t('update_error_title'), self.t(result.error))
@@ -2067,24 +2114,18 @@ class MainWindow(QMainWindow):
                 QDesktopServices.openUrl(QUrl(release.release_url))
             return
 
-        progress = QProgressDialog(self.t('update_download_started'), '', 0, 0, self)
-        progress.setWindowTitle(self.t('update_title'))
-        progress.setCancelButton(None)
-        progress.setWindowModality(Qt.WindowModality.ApplicationModal)
-        progress.setMinimumDuration(0)
-        progress.show()
-        QApplication.processEvents()
-
+        busy_dialog = self._show_busy_update_dialog(self.t('update_download_started'))
         try:
             package_path, _checksum = self.update_service.download_release_asset(release)
         except Exception as exc:
-            progress.close()
+            self._close_busy_update_dialog(busy_dialog)
             self._append_log('[WARN] Update download failed: ' + str(exc))
             QMessageBox.warning(self, self.t('update_title'), self.t('update_download_failed'))
             return
 
-        progress.close()
+        self._close_busy_update_dialog(busy_dialog)
 
+        apply_dialog = self._show_busy_update_dialog(self.t('update_applying'))
         try:
             install_dir = Path(sys.executable).resolve().parent
             exe_path = Path(sys.executable).resolve()
@@ -2095,11 +2136,15 @@ class MainWindow(QMainWindow):
                 parent_pid=os.getpid(),
             )
         except Exception as exc:
+            self._close_busy_update_dialog(apply_dialog)
             self._append_log('[WARN] Update apply failed: ' + str(exc))
             QMessageBox.warning(self, self.t('update_title'), self.t('update_prepare_failed'))
             return
 
+        self._close_busy_update_dialog(apply_dialog)
+
         QMessageBox.information(self, self.t('update_title'), self.t('update_restart_prompt'))
+        QApplication.processEvents()
         self.close()
 
     def _append_log(self, message):
@@ -2298,6 +2343,8 @@ class MainWindow(QMainWindow):
         if m:
             return f"{m}m {s}s"
         return f"{s}s"
+
+
 
 
 

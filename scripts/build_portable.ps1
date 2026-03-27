@@ -23,7 +23,28 @@ if (-not $PythonExe) {
 }
 
 $env:PYTHONPATH = Join-Path $root "src"
-$version = (& $PythonExe -c "from voodoo_loader import __version__; print(__version__)").Trim()
+
+$version = ""
+if ($env:VOODOO_LOADER_BUILD_VERSION) {
+    $version = $env:VOODOO_LOADER_BUILD_VERSION.Trim().TrimStart("v", "V")
+}
+
+if (-not $version) {
+    try {
+        $latestTag = (& git describe --tags --match "v*" --abbrev=0 2>$null).Trim()
+        if ($latestTag) {
+            $version = $latestTag.TrimStart("v", "V")
+        }
+    }
+    catch {
+        $version = ""
+    }
+}
+
+if (-not $version) {
+    $version = (& $PythonExe -c "from voodoo_loader import __version__; print(__version__)").Trim().TrimStart("v", "V")
+}
+
 if (-not $version) {
     throw "Failed to resolve app version"
 }
@@ -45,6 +66,9 @@ if ($TargetOs -ne "windows") {
 if (-not (Test-Path (Join-Path $bundlePath $exeName))) {
     throw "Portable bundle was not created: $bundlePath"
 }
+
+$versionFilePath = Join-Path $bundlePath "voodoo_loader_version.txt"
+[System.IO.File]::WriteAllText($versionFilePath, $version, (New-Object System.Text.UTF8Encoding($false)))
 
 if (-not $NoArchive) {
     $archiveBase = "VoodooLoader-v$version-$PlatformLabel-$TargetArch-portable"
