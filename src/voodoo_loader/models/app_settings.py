@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from dataclasses import dataclass, field
 
@@ -39,6 +39,9 @@ class AppSettings:
     # Backward-compatible auth mode state
     auth_section_expanded: bool = False
     auth_mode: str = "none"
+
+    # Updates
+    update_repository: str = ""
 
     @classmethod
     def from_dict(cls, data: dict) -> "AppSettings":
@@ -121,6 +124,7 @@ class AppSettings:
             show_logs=bool(data.get("show_logs", True)),
             auth_section_expanded=bool(data.get("auth_section_expanded", False)),
             auth_mode=auth_mode_raw,
+            update_repository=str(data.get("update_repository", "")).strip(),
         )
 
     def to_dict(self) -> dict:
@@ -147,4 +151,5 @@ class AppSettings:
             "show_logs": self.show_logs,
             "auth_section_expanded": self.auth_section_expanded,
             "auth_mode": self.auth_mode,
+            "update_repository": self.update_repository,
         }

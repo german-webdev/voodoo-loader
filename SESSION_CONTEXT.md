@@ -1,4 +1,4 @@
-﻿# Voodoo Loader - Session Context
+# Voodoo Loader - Session Context
 
 Updated: 2026-03-28
 Project root: `F:\AI\p-m\hf_aria2_downloader_gui`
@@ -292,3 +292,16 @@ scripts\build_portable.ps1
 - Fix: rewrote `_build_download_options()` to a deterministic implementation using `_resolve_auth_payload(...)` and explicit `DownloadOptions(...)` mapping.
 - Regression checks: added `tests/test_main_window_download_options.py` to validate payload construction and prevent silent runtime breakage; full `pytest` required before build.
 - Prevention rule: every change in start-path methods (`_start_queue`, `_build_download_options`, auth resolution) must be covered by a focused unit test.
+
+### 2026-03-28 - Help menu and GitHub Releases updater implemented
+- Scope: added top-level `Help` menu with modal `Check updates` and `About` actions.
+- Update backend: `UpdateService` (`services/update_service.py`) with GitHub Releases API integration, semantic version comparison, preferred portable-zip asset selection, optional `.sha256` verification, and Windows external updater handoff.
+- UX flow: checking modal -> update/no-update modal -> confirm update -> download -> close/restart handoff via updater script.
+- Persistence: new settings field `update_repository` (for release channel repository).
+- Regression coverage: added `tests/test_update_service.py`, localization key coverage extended, settings roundtrip coverage extended.
+
+### 2026-03-28 - Encoding incident during localization update
+- Symptom: test collection failed with syntax errors after localization edits.
+- Root cause: malformed textual replacement inserted literal escape tokens into test source and one localization write pass used unsafe encoding flow.
+- Fix: rewrote affected files in explicit UTF-8, restored clean Python syntax, re-ran full test suite.
+- Prevention rule: for Python source writes use explicit UTF-8 output and avoid inline escape-token replacements inside code lists.

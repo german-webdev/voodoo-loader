@@ -456,7 +456,7 @@ This program is mandatory and tracked in `UPGRADE_LIST.md`.
 ### 14.1 Queue and list UX
 - Remove `Destination` from queue table.
 - Show per-item total size in queue table.
-- Add localized queue block title (`Queue downloads` / `Очередь закачек`).
+- Add localized queue block title (`Queue downloads` / `РћС‡РµСЂРµРґСЊ Р·Р°РєР°С‡РµРє`).
 - Add item checkbox selection and `Select all` control.
 - Add status color coding:
   - failed = red
@@ -477,7 +477,7 @@ This program is mandatory and tracked in `UPGRADE_LIST.md`.
 
 ### 14.3 Settings migration
 - Move aria2 tuning options from inline panel to `Settings` dialog.
-- Rename inline speed block to `Speed` / `Пресеты скорости`.
+- Rename inline speed block to `Speed` / `РџСЂРµСЃРµС‚С‹ СЃРєРѕСЂРѕСЃС‚Рё`.
 - Move `Continue / Resume (-c)` into `Settings` and provide an explanatory hint.
 - Move authentication controls into `Settings` dialog.
 
@@ -504,3 +504,31 @@ This program is mandatory and tracked in `UPGRADE_LIST.md`.
 - Every feature/update that changes behavior must ship with automated tests before build.
 - Critical start path (`_build_download_options`, auth resolution, `_start_queue`) requires dedicated regression tests.
 - Portable build is allowed only after green full test suite.
+
+### 14.8 Help Menu and In-App Update Flow
+- Add top-level menu `Help` / `Помощь` after `Settings`.
+- `Help` must include two modal actions:
+  - `Check Voodoo Loader updates` / `Проверить обновление Voodoo Loader`
+  - `About` / `О программе`
+- Update-check modal flow:
+  1. Show blocking modal state `Checking for updates...`.
+  2. Query GitHub Releases API for configured repository.
+  3. If no newer version exists, show modal: "You already have the latest version".
+  4. If newer version exists, show current/target versions and confirmation controls (`Update`, `Cancel`).
+  5. On confirm, download release asset and apply update via external updater process.
+
+### 14.9 GitHub Releases Update Channel
+- Update source: GitHub Releases.
+- Expected release payload:
+  - semantic version tag (e.g. `v0.1.0-alpha`)
+  - portable zip asset (`*portable*.zip` preferred)
+  - optional `.sha256` asset for integrity verification.
+- The app must support opening release page when direct update asset is unavailable.
+- Update must be blocked while active downloads are running.
+
+## 15. Versioning and Release Notes
+- Versioning standard: SemVer with optional pre-release suffixes (`-alpha`, `-beta`, etc.).
+- Initial release line: `0.1.0-alpha`.
+- Every release must update `CHANGELOG.md` with patch notes.
+- Changelog entries must include: Added / Changed / Fixed / Known Issues.
+- Git tags must match release versions (`v0.1.0-alpha`, `v0.1.1`, etc.).

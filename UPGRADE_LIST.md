@@ -1,4 +1,4 @@
-﻿# Voodoo Loader - Upgrade List
+# Voodoo Loader - Upgrade List
 
 Updated: 2026-03-27
 Status legend: `pending`, `in_progress`, `done`, `deferred`
@@ -35,3 +35,5 @@ Constraints:
 26. Add widget-level drag'n'drop tests (viewport source + mime drop path) (`done`)
 
 27. Fix `Start` regression in `_build_download_options` and add dedicated start-path regression test (`done`)
+
+28. Help menu + in-app update flow (GitHub Releases, modal check/about, update apply) (done)

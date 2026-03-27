@@ -1,4 +1,4 @@
-﻿from voodoo_loader.services.localization_service import LocalizationService
+from voodoo_loader.services.localization_service import LocalizationService
 
 
 def test_bulk_operation_messages_exist_in_en_and_ru() -> None:
@@ -35,10 +35,19 @@ def test_bulk_operation_messages_exist_in_en_and_ru() -> None:
         "auth_validation_token_or_header_required",
         "auth_validation_username_required",
         "auth_validation_password_required",
+        "menu_help",
+        "menu_help_check_updates",
+        "menu_help_about",
+        "about_title",
+        "update_title",
+        "update_checking",
+        "update_latest_message",
+        "update_available_message",
+        "update_repo_not_configured",
     ]
 
     for language in ("en", "ru"):
         for key in keys:
-            rendered = service.t(key, language, count=3)
+            rendered = service.t(key, language, count=3, version="0.1.0", current="0.1.0", latest="0.2.0")
             assert rendered != key
             assert rendered.strip()

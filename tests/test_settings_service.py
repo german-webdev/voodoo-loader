@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 from uuid import uuid4
 
 from voodoo_loader.models.app_settings import AppSettings
@@ -144,3 +144,15 @@ def test_settings_do_not_persist_auth_values_when_opt_out() -> None:
     assert loaded.save_credentials is False
     assert loaded.saved_username == ""
 
+
+
+def test_settings_update_repository_roundtrip() -> None:
+    work_dir = _workspace_temp_dir()
+    service = SettingsService()
+    service.path = work_dir / "settings.json"
+
+    service.save(AppSettings(update_repository="owner/repo"))
+
+    loaded = service.load()
+
+    assert loaded.update_repository == "owner/repo"

@@ -1,0 +1,358 @@
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import re
+import subprocess
+import tempfile
+import urllib.error
+import urllib.request
+from dataclasses import dataclass
+from pathlib import Path
+
+
+DEFAULT_GITHUB_REPOSITORY = os.getenv("VOODOO_LOADER_GITHUB_REPOSITORY", "")
+
+
+@dataclass(slots=True)
+class UpdateRelease:
+    version: str
+    tag_name: str
+    release_url: str
+    notes: str
+    asset_name: str
+    asset_url: str
+    checksum_url: str = ""
+
+
+@dataclass(slots=True)
+class UpdateCheckResult:
+    current_version: str
+    latest_version: str = ""
+    update_available: bool = False
+    release: UpdateRelease | None = None
+    error: str = ""
+
+
+class UpdateService:
+    _SEMVER_RE = re.compile(
+        r"^v?(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)"
+        r"(?:-(?P<prerelease>[0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$"
+    )
+
+    def __init__(self, repository: str = DEFAULT_GITHUB_REPOSITORY) -> None:
+        self.repository = repository.strip()
+
+    @staticmethod
+    def normalize_version(raw: str) -> str:
+        return raw.strip().lstrip("vV")
+
+    @classmethod
+    def parse_semver(cls, raw: str) -> tuple[int, int, int, tuple[str | int, ...]] | None:
+        normalized = cls.normalize_version(raw)
+        match = cls._SEMVER_RE.match(normalized)
+        if not match:
+            return None
+
+        major = int(match.group("major"))
+        minor = int(match.group("minor"))
+        patch = int(match.group("patch"))
+
+        prerelease_raw = match.group("prerelease")
+        prerelease: tuple[str | int, ...] = ()
+        if prerelease_raw:
+            parts: list[str | int] = []
+            for part in prerelease_raw.split("."):
+                if part.isdigit():
+                    parts.append(int(part))
+                else:
+                    parts.append(part.lower())
+            prerelease = tuple(parts)
+
+        return (major, minor, patch, prerelease)
+
+    @classmethod
+    def _compare_prerelease(cls, left: tuple[str | int, ...], right: tuple[str | int, ...]) -> int:
+        if not left and not right:
+            return 0
+        if not left:
+            return 1
+        if not right:
+            return -1
+
+        for index in range(min(len(left), len(right))):
+            lpart = left[index]
+            rpart = right[index]
+            if lpart == rpart:
+                continue
+
+            left_is_int = isinstance(lpart, int)
+            right_is_int = isinstance(rpart, int)
+
+            if left_is_int and right_is_int:
+                return 1 if int(lpart) > int(rpart) else -1
+            if left_is_int and not right_is_int:
+                return -1
+            if not left_is_int and right_is_int:
+                return 1
+
+            lstr = str(lpart)
+            rstr = str(rpart)
+            if lstr > rstr:
+                return 1
+            return -1
+
+        if len(left) == len(right):
+            return 0
+        return 1 if len(left) > len(right) else -1
+
+    @classmethod
+    def compare_versions(cls, left: str, right: str) -> int:
+        lparsed = cls.parse_semver(left)
+        rparsed = cls.parse_semver(right)
+        if lparsed is None or rparsed is None:
+            lnorm = cls.normalize_version(left)
+            rnorm = cls.normalize_version(right)
+            if lnorm == rnorm:
+                return 0
+            return 1 if lnorm > rnorm else -1
+
+        lmajor, lminor, lpatch, lpre = lparsed
+        rmajor, rminor, rpatch, rpre = rparsed
+
+        left_core = (lmajor, lminor, lpatch)
+        right_core = (rmajor, rminor, rpatch)
+        if left_core != right_core:
+            return 1 if left_core > right_core else -1
+
+        return cls._compare_prerelease(lpre, rpre)
+
+    def _api_url(self, repository: str) -> str:
+        return f"https://api.github.com/repos/{repository}/releases"
+
+    @staticmethod
+    def _request_json(url: str, timeout_sec: int) -> object:
+        request = urllib.request.Request(
+            url,
+            headers={
+                "Accept": "application/vnd.github+json",
+                "User-Agent": "VoodooLoader-UpdateChecker",
+            },
+            method="GET",
+        )
+        with urllib.request.urlopen(request, timeout=timeout_sec) as response:
+            payload = response.read().decode("utf-8", errors="replace")
+        return json.loads(payload)
+
+    @staticmethod
+    def _pick_asset_urls(assets: list[dict]) -> tuple[str, str, str]:
+        if not assets:
+            return ("", "", "")
+
+        preferred_zip = ""
+        preferred_name = ""
+        checksum_url = ""
+
+        for asset in assets:
+            name = str(asset.get("name", ""))
+            url = str(asset.get("browser_download_url", ""))
+            lower_name = name.lower()
+            if not url:
+                continue
+
+            if lower_name.endswith(".sha256") and not checksum_url:
+                checksum_url = url
+
+            if lower_name.endswith(".zip"):
+                if "portable" in lower_name:
+                    return (name, url, checksum_url)
+                if not preferred_zip:
+                    preferred_zip = url
+                    preferred_name = name
+
+        if preferred_zip:
+            return (preferred_name, preferred_zip, checksum_url)
+
+        first_asset = assets[0]
+        return (
+            str(first_asset.get("name", "")),
+            str(first_asset.get("browser_download_url", "")),
+            checksum_url,
+        )
+
+    def check_for_updates(self, current_version: str, repository: str = "", timeout_sec: int = 10) -> UpdateCheckResult:
+        current = self.normalize_version(current_version)
+        repo = (repository or self.repository).strip()
+
+        if not repo or "/" not in repo:
+            return UpdateCheckResult(current_version=current, error="update_repo_not_configured")
+
+        try:
+            payload = self._request_json(self._api_url(repo), timeout_sec)
+        except urllib.error.HTTPError as exc:
+            if exc.code == 403:
+                return UpdateCheckResult(current_version=current, error="update_http_403")
+            return UpdateCheckResult(current_version=current, error=f"update_http_{exc.code}")
+        except urllib.error.URLError:
+            return UpdateCheckResult(current_version=current, error="update_network_error")
+        except Exception:
+            return UpdateCheckResult(current_version=current, error="update_parse_error")
+
+        if not isinstance(payload, list):
+            return UpdateCheckResult(current_version=current, error="update_parse_error")
+
+        best_release: UpdateRelease | None = None
+        for release_raw in payload:
+            if not isinstance(release_raw, dict):
+                continue
+            if bool(release_raw.get("draft", False)):
+                continue
+
+            tag_name = str(release_raw.get("tag_name", "")).strip()
+            version = self.normalize_version(tag_name)
+            if not version:
+                continue
+
+            if best_release is None or self.compare_versions(version, best_release.version) > 0:
+                assets = release_raw.get("assets", [])
+                if isinstance(assets, list):
+                    asset_name, asset_url, checksum_url = self._pick_asset_urls(assets)
+                else:
+                    asset_name, asset_url, checksum_url = ("", "", "")
+
+                best_release = UpdateRelease(
+                    version=version,
+                    tag_name=tag_name,
+                    release_url=str(release_raw.get("html_url", "")),
+                    notes=str(release_raw.get("body", "")),
+                    asset_name=asset_name,
+                    asset_url=asset_url,
+                    checksum_url=checksum_url,
+                )
+
+        if best_release is None:
+            return UpdateCheckResult(current_version=current, error="update_no_release")
+
+        update_available = self.compare_versions(best_release.version, current) > 0
+        return UpdateCheckResult(
+            current_version=current,
+            latest_version=best_release.version,
+            update_available=update_available,
+            release=best_release,
+        )
+
+    @staticmethod
+    def download_file(url: str, destination: Path, timeout_sec: int = 60) -> Path:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        request = urllib.request.Request(
+            url,
+            headers={"User-Agent": "VoodooLoader-Updater"},
+            method="GET",
+        )
+        with urllib.request.urlopen(request, timeout=timeout_sec) as response:
+            with destination.open("wb") as handle:
+                while True:
+                    chunk = response.read(1024 * 64)
+                    if not chunk:
+                        break
+                    handle.write(chunk)
+        return destination
+
+    @staticmethod
+    def _read_sha256(expected_payload: str) -> str:
+        line = expected_payload.strip().splitlines()[0].strip() if expected_payload.strip() else ""
+        if not line:
+            return ""
+        candidate = line.split()[0].strip().lower()
+        if re.fullmatch(r"[a-f0-9]{64}", candidate):
+            return candidate
+        return ""
+
+    @staticmethod
+    def verify_sha256(path: Path, expected_hash: str) -> bool:
+        expected = expected_hash.strip().lower()
+        if not expected:
+            return True
+        digest = hashlib.sha256()
+        with path.open("rb") as handle:
+            while True:
+                chunk = handle.read(1024 * 1024)
+                if not chunk:
+                    break
+                digest.update(chunk)
+        return digest.hexdigest().lower() == expected
+
+    def fetch_expected_hash(self, checksum_url: str, timeout_sec: int = 20) -> str:
+        if not checksum_url:
+            return ""
+        request = urllib.request.Request(
+            checksum_url,
+            headers={"User-Agent": "VoodooLoader-Updater"},
+            method="GET",
+        )
+        with urllib.request.urlopen(request, timeout=timeout_sec) as response:
+            payload = response.read().decode("utf-8", errors="replace")
+        return self._read_sha256(payload)
+
+    def download_release_asset(self, release: UpdateRelease, timeout_sec: int = 120) -> tuple[Path, str]:
+        if not release.asset_url:
+            raise ValueError("No downloadable asset URL in release")
+
+        temp_dir = Path(tempfile.mkdtemp(prefix="voodoo-loader-update-"))
+        asset_name = release.asset_name.strip() or "update.zip"
+        destination = temp_dir / asset_name
+
+        self.download_file(release.asset_url, destination, timeout_sec=timeout_sec)
+        expected_hash = self.fetch_expected_hash(release.checksum_url)
+        if expected_hash and not self.verify_sha256(destination, expected_hash):
+            raise ValueError("SHA256 mismatch for downloaded update")
+
+        return destination, expected_hash
+
+    @staticmethod
+    def launch_windows_updater(zip_path: Path, install_dir: Path, exe_path: Path, parent_pid: int) -> None:
+        script_path = zip_path.parent / "voodoo_loader_apply_update.ps1"
+        script_path.write_text(
+            "\n".join(
+                [
+                    "param(",
+                    "  [string]$ZipPath,",
+                    "  [string]$InstallDir,",
+                    "  [string]$ExePath,",
+                    "  [int]$ParentPid",
+                    ")",
+                    "$ErrorActionPreference = 'Stop'",
+                    "for ($i = 0; $i -lt 240; $i++) {",
+                    "  if (-not (Get-Process -Id $ParentPid -ErrorAction SilentlyContinue)) { break }",
+                    "  Start-Sleep -Milliseconds 500",
+                    "}",
+                    "Expand-Archive -LiteralPath $ZipPath -DestinationPath $InstallDir -Force",
+                    "Remove-Item -LiteralPath $ZipPath -Force -ErrorAction SilentlyContinue",
+                    "Remove-Item -LiteralPath $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue",
+                    "Start-Process -FilePath $ExePath",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+        subprocess.Popen(
+            [
+                "powershell",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                str(script_path),
+                "-ZipPath",
+                str(zip_path),
+                "-InstallDir",
+                str(install_dir),
+                "-ExePath",
+                str(exe_path),
+                "-ParentPid",
+                str(parent_pid),
+            ],
+            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,
+            close_fds=True,
+        )
+

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import sys
 import uuid
 from pathlib import Path
 
@@ -21,6 +23,7 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QProgressBar,
     QPushButton,
+    QProgressDialog,
     QSpinBox,
     QSplitter,
     QTableWidget,
@@ -29,6 +32,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from voodoo_loader import __version__
 from voodoo_loader.models.download_options import DownloadOptions
 from voodoo_loader.models.queue_item import QueueItem, QueueItemPriority, QueueItemStatus
 from voodoo_loader.services import (
@@ -37,6 +41,7 @@ from voodoo_loader.services import (
     LocalizationService,
     SettingsService,
     SoundService,
+    UpdateService,
     mask_command_for_log,
 )
 from voodoo_loader.widgets import SettingsDialog
@@ -166,7 +171,12 @@ class MainWindow(QMainWindow):
         self.localization = LocalizationService()
         self.provisioning = Aria2ProvisioningService()
         self.aria2_service = Aria2Service(self)
+        self.update_service = UpdateService()
         self.settings = self.settings_service.load()
+        if not self.settings.update_repository.strip() and self.update_service.repository:
+            self.settings.update_repository = self.update_service.repository
+        if self.settings.update_repository.strip():
+            self.update_service.repository = self.settings.update_repository.strip()
         if self.settings.language in frozenset({'en', 'ru'}):
             self.language = self.settings.language
         else:
@@ -525,6 +535,13 @@ class MainWindow(QMainWindow):
         lang_ru_action.triggered.connect(__temp_385)
         language_menu.addAction(lang_en_action)
         language_menu.addAction(lang_ru_action)
+        help_menu = self.menuBar().addMenu(self.t('menu_help'))
+        check_updates_action = QAction(self.t('menu_help_check_updates'), self)
+        check_updates_action.triggered.connect(self._show_update_dialog)
+        help_menu.addAction(check_updates_action)
+        about_action = QAction(self.t('menu_help_about'), self)
+        about_action.triggered.connect(self._show_about_dialog)
+        help_menu.addAction(about_action)
         return None
 
     def _set_language(self, language):
@@ -1185,6 +1202,7 @@ class MainWindow(QMainWindow):
         self.settings.chunk_size = self.chunk_input.text().strip() or "1M"
         self.settings.max_concurrent_downloads = max(0, min(32, int(self.settings.max_concurrent_downloads)))
         self.settings.language = self.language
+        self.settings.update_repository = self.update_service.repository.strip()
         self.settings.auth_section_expanded = False
         self.settings.auth_mode = self._current_auth_mode()
         save_token, saved_token, save_credentials, saved_username = self._compute_persisted_auth_state(
@@ -1960,6 +1978,124 @@ class MainWindow(QMainWindow):
             self._save_queue_snapshot()
             return None
 
+    def _show_about_dialog(self) -> None:
+        QMessageBox.information(self, self.t('about_title'), self.t('about_text', version=__version__))
+
+    def _show_update_dialog(self) -> None:
+        if self.aria2_service.is_running:
+            QMessageBox.warning(self, self.t('update_title'), self.t('update_running_blocked'))
+            return
+
+        progress = QProgressDialog(self.t('update_checking'), '', 0, 0, self)
+        progress.setWindowTitle(self.t('update_title'))
+        progress.setCancelButton(None)
+        progress.setWindowModality(Qt.WindowModality.ApplicationModal)
+        progress.setMinimumDuration(0)
+        progress.show()
+        QApplication.processEvents()
+
+        result = self.update_service.check_for_updates(
+            current_version=__version__,
+            repository=self.settings.update_repository,
+        )
+        progress.close()
+
+        if result.error:
+            QMessageBox.warning(self, self.t('update_error_title'), self.t(result.error))
+            return
+
+        if not result.update_available:
+            QMessageBox.information(
+                self,
+                self.t('update_latest_title'),
+                self.t('update_latest_message', version=result.current_version),
+            )
+            return
+
+        release = result.release
+        if release is None:
+            QMessageBox.warning(self, self.t('update_error_title'), self.t('update_parse_error'))
+            return
+
+        dialog = QMessageBox(self)
+        dialog.setWindowTitle(self.t('update_available_title'))
+        dialog.setIcon(QMessageBox.Icon.Information)
+        dialog.setText(self.t('update_available_message', current=result.current_version, latest=result.latest_version))
+        dialog.setInformativeText(self.t('update_available_question'))
+
+        install_button = dialog.addButton(self.t('update_button_install'), QMessageBox.ButtonRole.AcceptRole)
+        cancel_button = dialog.addButton(QMessageBox.StandardButton.Cancel)
+        _ = cancel_button
+
+        open_release_button = None
+        if release.release_url:
+            open_release_button = dialog.addButton(self.t('update_open_release'), QMessageBox.ButtonRole.ActionRole)
+
+        dialog.exec()
+        clicked = dialog.clickedButton()
+
+        if open_release_button is not None and clicked is open_release_button:
+            QDesktopServices.openUrl(QUrl(release.release_url))
+            self._append_log('[INFO] ' + str(self.t('update_release_opened')))
+            return
+
+        if clicked is install_button:
+            self._download_and_apply_update(release)
+
+    def _download_and_apply_update(self, release) -> None:
+        if not getattr(sys, 'frozen', False):
+            QMessageBox.information(self, self.t('update_title'), self.t('update_dev_mode'))
+            if release.release_url:
+                QDesktopServices.openUrl(QUrl(release.release_url))
+            return
+
+        if not release.asset_url:
+            response = QMessageBox.question(
+                self,
+                self.t('update_title'),
+                self.t('update_release_no_asset'),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes,
+            )
+            if response == QMessageBox.StandardButton.Yes and release.release_url:
+                QDesktopServices.openUrl(QUrl(release.release_url))
+            return
+
+        progress = QProgressDialog(self.t('update_download_started'), '', 0, 0, self)
+        progress.setWindowTitle(self.t('update_title'))
+        progress.setCancelButton(None)
+        progress.setWindowModality(Qt.WindowModality.ApplicationModal)
+        progress.setMinimumDuration(0)
+        progress.show()
+        QApplication.processEvents()
+
+        try:
+            package_path, _checksum = self.update_service.download_release_asset(release)
+        except Exception as exc:
+            progress.close()
+            self._append_log('[WARN] Update download failed: ' + str(exc))
+            QMessageBox.warning(self, self.t('update_title'), self.t('update_download_failed'))
+            return
+
+        progress.close()
+
+        try:
+            install_dir = Path(sys.executable).resolve().parent
+            exe_path = Path(sys.executable).resolve()
+            self.update_service.launch_windows_updater(
+                zip_path=package_path,
+                install_dir=install_dir,
+                exe_path=exe_path,
+                parent_pid=os.getpid(),
+            )
+        except Exception as exc:
+            self._append_log('[WARN] Update apply failed: ' + str(exc))
+            QMessageBox.warning(self, self.t('update_title'), self.t('update_prepare_failed'))
+            return
+
+        QMessageBox.information(self, self.t('update_title'), self.t('update_restart_prompt'))
+        self.close()
+
     def _append_log(self, message):
         self.log_output.appendPlainText(message)
         return None
@@ -2156,5 +2292,11 @@ class MainWindow(QMainWindow):
         if m:
             return f"{m}m {s}s"
         return f"{s}s"
+
+
+
+
+
+
 
 
