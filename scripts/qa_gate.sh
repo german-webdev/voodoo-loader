@@ -20,7 +20,11 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$PYTHON_EXE" ]]; then
-  if [[ -x ".venv312/bin/python" ]]; then
+  if [[ -x ".venv312/Scripts/python.exe" ]]; then
+    PYTHON_EXE=".venv312/Scripts/python.exe"
+  elif [[ -x ".venv/Scripts/python.exe" ]]; then
+    PYTHON_EXE=".venv/Scripts/python.exe"
+  elif [[ -x ".venv312/bin/python" ]]; then
     PYTHON_EXE=".venv312/bin/python"
   elif [[ -x ".venv/bin/python" ]]; then
     PYTHON_EXE=".venv/bin/python"
