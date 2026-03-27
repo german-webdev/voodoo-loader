@@ -3,8 +3,8 @@ from __future__ import annotations
 import uuid
 from pathlib import Path
 
-from PySide6.QtCore import QByteArray, QMimeData, QUrl, Qt, Signal
-from PySide6.QtGui import QAction, QBrush, QColor, QDesktopServices, QDrag, QKeySequence, QShortcut
+from PySide6.QtCore import QByteArray, QUrl, Qt, Signal
+from PySide6.QtGui import QAction, QBrush, QColor, QDesktopServices, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -76,20 +76,15 @@ PRIORITY_ORDER = {
 class QueueTableWidget(QTableWidget):
     rows_dropped = Signal(list, int)
 
-    def startDrag(self, _supported_actions) -> None:  # noqa: N802
-        selected_rows = sorted({index.row() for index in self.selectedIndexes()})
-        if not selected_rows:
+    def dragMoveEvent(self, event) -> None:  # noqa: N802
+        if event.source() is self:
+            event.acceptProposedAction()
             return
-
-        drag = QDrag(self)
-        mime = QMimeData()
-        mime.setData("application/x-voodoo-row-reorder", QByteArray(b"1"))
-        drag.setMimeData(mime)
-        drag.exec(Qt.DropAction.CopyAction)
+        super().dragMoveEvent(event)
 
     def dropEvent(self, event) -> None:  # noqa: N802
         if event.source() is not self:
-            event.ignore()
+            super().dropEvent(event)
             return
 
         selected_rows = sorted({index.row() for index in self.selectedIndexes()})
@@ -102,8 +97,7 @@ class QueueTableWidget(QTableWidget):
             target_row = self.rowCount()
 
         self.rows_dropped.emit(selected_rows, target_row)
-        event.setDropAction(Qt.DropAction.CopyAction)
-        event.accept()
+        event.acceptProposedAction()
 
 
 
@@ -177,11 +171,11 @@ class MainWindow(QMainWindow):
         self.queue_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.queue_table.horizontalHeader().setStretchLastSection(True)
         self.queue_table.setColumnHidden(COL_ID, True)
-        self.queue_table.setDragDropMode(QTableWidget.DragDropMode.DragDrop)
+        self.queue_table.setDragDropMode(QTableWidget.DragDropMode.InternalMove)
         self.queue_table.setDragEnabled(True)
         self.queue_table.viewport().setAcceptDrops(True)
         self.queue_table.setDropIndicatorShown(True)
-        self.queue_table.setDefaultDropAction(Qt.DropAction.CopyAction)
+        self.queue_table.setDefaultDropAction(Qt.DropAction.MoveAction)
         self.queue_table.setDragDropOverwriteMode(False)
         self.queue_table.setColumnWidth(COL_SELECT, 70)
         self.queue_table.setColumnWidth(COL_URL, 480)
