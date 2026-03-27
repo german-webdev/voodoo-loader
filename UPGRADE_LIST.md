@@ -38,3 +38,5 @@ Constraints:
 
 28. Help menu + in-app update flow (GitHub Releases, modal check/about, update apply) (done)
 29. Cross-platform build matrix + release artifact naming convention (done)
+30. Fix Linux portable CI build conflict (PyInstaller EXE/COLLECT naming + Ubuntu Qt libs install) (done)
+

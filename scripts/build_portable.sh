@@ -60,7 +60,11 @@ mkdir -p "$DIST_PATH" "$WORK_PATH"
 $PYTHON_EXE -m PyInstaller --noconfirm --clean --distpath "$DIST_PATH" --workpath "$WORK_PATH" "$SPEC_PATH"
 
 BUNDLE_PATH="$DIST_PATH/VoodooLoader"
-if [[ ! -f "$BUNDLE_PATH/VoodooLoader" ]]; then
+if [[ -f "$BUNDLE_PATH/VoodooLoader" ]]; then
+  BINARY_PATH="$BUNDLE_PATH/VoodooLoader"
+elif [[ -f "$BUNDLE_PATH/VoodooLoader-bin" ]]; then
+  BINARY_PATH="$BUNDLE_PATH/VoodooLoader-bin"
+else
   echo "Portable bundle was not created: $BUNDLE_PATH" >&2
   exit 1
 fi
@@ -73,4 +77,5 @@ if [[ "$NO_ARCHIVE" != "true" ]]; then
   echo "Portable archive: $ARCHIVE_PATH"
 fi
 
+echo "Portable binary: $BINARY_PATH"
 echo "Portable folder: $BUNDLE_PATH"

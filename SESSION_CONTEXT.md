@@ -311,3 +311,11 @@ scripts\build_portable.ps1
 - Added release automation on tag push (`v*`) to attach generated artifacts to GitHub Release.
 - Update service asset selection upgraded to runtime OS/arch-aware matching.
 - Windows x86 target marked deferred due current PySide6/Qt6 stack limitation.
+### 2026-03-28 - Linux CI PyInstaller COLLECT name conflict
+- Symptom: Ubuntu build failed during COLLECT with Resource '.../dist/portable/VoodooLoader' is not a valid file.
+- Root cause: in packaging/voodoo_loader.spec, both EXE and COLLECT used the same name (VoodooLoader). On Linux this causes a binary-vs-folder naming collision.
+- Fix: split names by platform: EXE uses VoodooLoader on Windows and VoodooLoader-bin on non-Windows; COLLECT keeps folder name VoodooLoader.
+- Build script hardening: scripts/build_portable.sh now validates both binary names (VoodooLoader and VoodooLoader-bin).
+- CI hardening: Ubuntu workflow installs required Qt/Pulse/XCB system libraries before build.
+- Regression checks: py_compile for spec + pytest (64 passed).
+- Prevention rule: for PyInstaller one-folder mode, executable name and collect directory name must never be identical on non-Windows targets.

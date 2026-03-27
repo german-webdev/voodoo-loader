@@ -1,5 +1,6 @@
-﻿# -*- mode: python ; coding: utf-8 -*-
+# -*- mode: python ; coding: utf-8 -*-
 from pathlib import Path
+import sys
 
 project_root = Path(SPECPATH).resolve().parent
 src_root = project_root / "src"
@@ -24,6 +25,9 @@ analysis = Analysis(
 )
 
 pyz = PYZ(analysis.pure)
+is_windows = sys.platform.startswith("win")
+# On Linux/macOS, keep executable name distinct from COLLECT folder name.
+exe_name = "VoodooLoader" if is_windows else "VoodooLoader-bin"
 
 exe = EXE(
     pyz,
@@ -31,7 +35,7 @@ exe = EXE(
     analysis.binaries,
     analysis.datas,
     [],
-    name="VoodooLoader",
+    name=exe_name,
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
