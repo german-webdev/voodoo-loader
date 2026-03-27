@@ -4,16 +4,30 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+usage() {
+  echo "Usage: $0 [--python <python_executable>]" >&2
+}
+
 PYTHON_EXE=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --python)
+      if [[ $# -lt 2 || "${2:-}" == --* ]]; then
+        echo "Missing value for --python" >&2
+        usage
+        exit 1
+      fi
       PYTHON_EXE="$2"
       shift 2
       ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
     *)
       echo "Unknown argument: $1" >&2
+      usage
       exit 1
       ;;
   esac

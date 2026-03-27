@@ -327,3 +327,11 @@ scripts\build_portable.ps1
 - Added governance guide: docs/REPO_GOVERNANCE.md with branch protection required check QA Gate / qa.
 - Process rule updated: no commit/push/merge without green QA gate.
 
+
+### 2026-03-28 - QA Gate CI mypy failure on Windows-only subprocess flags
+- Symptom: QA Gate / qa failed on Ubuntu with mypy errors for subprocess.CREATE_NEW_PROCESS_GROUP and subprocess.DETACHED_PROCESS in updater launch path.
+- Root cause: Windows-only subprocess attributes are not guaranteed by non-Windows stubs used by mypy in Linux CI.
+- Fix: replaced direct attribute access with typed getattr(...) fallbacks and local creation_flags int composition in update_service.py.
+- Additional hardening: scripts/qa_gate.sh now validates --python argument value presence and prints usage for malformed invocation.
+- Regression checks: local QA gate (uff, mypy, pytest) must pass before push.
+
