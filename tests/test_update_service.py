@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from pathlib import Path
+from types import SimpleNamespace
+
+import voodoo_loader.services.update_service as update_module
 from voodoo_loader.services.update_service import UpdateService
 
 
@@ -123,3 +127,44 @@ def test_default_repository_is_configured() -> None:
     service = UpdateService()
     assert service.repository.strip() != ""
     assert "/" in service.repository
+
+
+def test_launch_windows_updater_generates_relaunch_script(monkeypatch) -> None:
+    zip_path = Path("C:/temp/update.zip")
+    install_dir = Path("C:/temp/portable")
+    exe_path = install_dir / "VoodooLoader.exe"
+
+    written: dict[str, object] = {}
+
+    def fake_write_text(self: Path, text: str, encoding: str = "utf-8") -> int:
+        written["path"] = self
+        written["text"] = text
+        written["encoding"] = encoding
+        return len(text)
+
+    captured: dict[str, object] = {}
+
+    def fake_popen(command, **kwargs):
+        captured["command"] = command
+        captured["kwargs"] = kwargs
+        return SimpleNamespace()
+
+    monkeypatch.setattr(Path, "write_text", fake_write_text)
+    monkeypatch.setattr(update_module.subprocess, "Popen", fake_popen)
+
+    UpdateService.launch_windows_updater(
+        zip_path=zip_path,
+        install_dir=install_dir,
+        exe_path=exe_path,
+        parent_pid=12345,
+    )
+
+    assert written.get("path") == zip_path.parent / "voodoo_loader_apply_update.ps1"
+    script_text = str(written.get("text", ""))
+    assert "Start-Process -FilePath $ExePath -WorkingDirectory $workingDir" in script_text
+    assert "Write-Log 'Updater started'" in script_text
+
+    kwargs = captured.get("kwargs")
+    assert isinstance(kwargs, dict)
+    assert kwargs.get("cwd") == str(install_dir)
+    assert int(kwargs.get("creationflags", 0)) > 0

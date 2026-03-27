@@ -14,7 +14,7 @@ Status legend: `pending`, `in_progress`, `done`, `deferred`
 9. Replace move up/down/top/bottom actions with drag-and-drop reordering (`done`)
 10. Add context-menu priority actions: High / Medium / Low (`done`)
 11. Move aria2 parameters to Settings dialog and remove inline settings button from speed block (`done`)
-12. Rename `aria2 Parameters` UI block to `Speed` / `РџСЂРµСЃРµС‚С‹ СЃРєРѕСЂРѕСЃС‚Рё` (`done`)
+12. Rename `aria2 Parameters` UI block to `Speed` / `Р В РЎСџР РЋР вЂљР В Р’ВµР РЋР С“Р В Р’ВµР РЋРІР‚С™Р РЋРІР‚в„– Р РЋР С“Р В РЎвЂќР В РЎвЂўР РЋР вЂљР В РЎвЂўР РЋР С“Р РЋРІР‚С™Р В РЎвЂ` (`done`)
 13. Move `Continue / Resume (-c)` to Settings with explanatory hint (`done`)
 14. Add `Downloads` menu and duplicate queue context actions there (`done`)
 15. Add actions: open downloaded file and open containing folder (`done`)
@@ -43,3 +43,9 @@ Constraints:
 31. Introduce mandatory QA gate (local scripts + pre-push hook + CI workflow + governance doc) (done)
 32. Add auto-tag on master merge (next vX.Y.Z-alpha tag generation workflow) (done)
 33. Configure default update repository for fresh/local builds (no manual setup required) (done)
+
+34. Version sync hardening for updates: bundle version stamp file + runtime resolution priority (done)
+35. Update UX fix: replace blank progress modal with explicit loader dialogs for check/download/apply (done)
+36. Update relaunch hardening: updater working directory + retry loop + manual fallback message (done)
+37. Add regression tests for update launcher and runtime version resolution (done)
+38. Progress bar visual refresh: height 10px + chunk color #00BB0A (done)

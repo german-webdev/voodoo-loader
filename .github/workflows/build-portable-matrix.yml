@@ -31,9 +31,10 @@ jobs:
 
       - name: Build portable archive
         shell: pwsh
+        env:
+          VOODOO_LOADER_BUILD_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
         run: |
           powershell -ExecutionPolicy Bypass -File scripts/build_portable.ps1 -PythonExe python -TargetOs windows -TargetArch x64 -PlatformLabel windows
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -73,10 +74,11 @@ jobs:
           pip install pyinstaller
 
       - name: Build portable archive
+        env:
+          VOODOO_LOADER_BUILD_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
         run: |
           chmod +x scripts/build_portable.sh
           ./scripts/build_portable.sh --python python --target-arch x64 --platform-label linux-ubuntu-22.04
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
