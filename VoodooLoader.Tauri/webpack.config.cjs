@@ -26,7 +26,24 @@ module.exports = {
         },
       },
       {
+        test: /\.module\.css$/i,
+        use: [
+          "style-loader",
+          {
+            loader: "css-loader",
+            options: {
+              modules: {
+                auto: true,
+                namedExport: false,
+                exportLocalsConvention: "as-is",
+              },
+            },
+          },
+        ],
+      },
+      {
         test: /\.css$/i,
+        exclude: /\.module\.css$/i,
         use: ["style-loader", "css-loader"],
       },
     ],
