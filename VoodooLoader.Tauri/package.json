@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "webpack serve --mode development --config webpack.config.cjs --hot",
     "build": "npm run typecheck && webpack --mode production --config webpack.config.cjs",
+    "build:analyze": "cross-env BUNDLE_ANALYZE=1 npm run build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -27,18 +28,17 @@
     "tauri": "tauri"
   },
   "dependencies": {
-    "@tauri-apps/api": "^2",
-    "@tauri-apps/plugin-opener": "^2",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@mui/material": "^7.0.2",
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-opener": "^2",
     "formik": "^2.4.6",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "yup": "^1.7.1"
   },
   "devDependencies": {
-    "typescript": "~5.8.3",
     "@eslint/js": "^9.38.0",
     "@playwright/test": "^1.56.1",
     "@storybook/addon-a11y": "^8.6.14",
@@ -51,6 +51,8 @@
     "@types/jest": "^29.5.14",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
+    "compression-webpack-plugin": "^12.0.0",
+    "cross-env": "^10.1.0",
     "css-loader": "^7.1.2",
     "eslint": "^9.38.0",
     "eslint-config-prettier": "^10.1.8",
@@ -68,10 +70,12 @@
     "serve": "^14.2.5",
     "storybook": "^8.6.14",
     "style-loader": "^4.0.0",
-    "ts-loader": "^9.5.4",
     "ts-jest": "^29.2.5",
+    "ts-loader": "^9.5.4",
+    "typescript": "~5.8.3",
     "typescript-eslint": "^8.46.1",
     "webpack": "^5.102.1",
+    "webpack-bundle-analyzer": "^5.3.0",
     "webpack-cli": "^6.0.1",
     "webpack-dev-server": "^5.2.2"
   },
