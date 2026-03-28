@@ -1,0 +1,14 @@
+.input {
+  width: var(--size-full);
+  min-height: var(--size-control-height);
+  border: var(--border-thin) solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-input-bg);
+  color: var(--color-text-primary);
+  padding-block: var(--space-input-block);
+  padding-inline: var(--space-input-inline);
+}
+
+.input:focus {
+  outline: var(--border-thin) solid var(--color-input-focus);
+}

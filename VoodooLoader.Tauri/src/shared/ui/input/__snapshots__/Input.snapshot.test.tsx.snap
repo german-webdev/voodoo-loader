@@ -1,0 +1,10 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Input snapshot matches default input snapshot 1`] = `
+<DocumentFragment>
+  <input
+    class="input"
+    value="snapshot"
+  />
+</DocumentFragment>
+`;

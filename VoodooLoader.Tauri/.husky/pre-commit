@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+set -e
+
+cd VoodooLoader.Tauri || exit 1
+npx lint-staged --no-stash --no-hide-partially-staged

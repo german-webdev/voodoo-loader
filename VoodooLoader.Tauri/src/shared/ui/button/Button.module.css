@@ -1,0 +1,28 @@
+.button {
+  min-height: var(--size-control-height);
+  border: var(--border-thin) solid var(--color-line);
+  border-radius: var(--radius-control);
+  color: var(--color-text-primary);
+  padding-inline: var(--space-button-inline);
+  padding-block: var(--space-zero);
+  cursor: pointer;
+}
+
+.button:hover {
+  background: var(--color-button-hover);
+}
+
+.primary {
+  background: var(--color-button-primary);
+  border-color: var(--color-button-primary-border);
+}
+
+.ghost {
+  background: var(--color-button-bg);
+}
+
+.mini {
+  min-height: var(--size-control-mini-height);
+  font-size: var(--font-size-xs);
+  padding-inline: var(--space-button-mini-inline);
+}
