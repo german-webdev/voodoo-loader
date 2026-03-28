@@ -6,7 +6,7 @@ describe("Button", () => {
     render(<Button variant="primary">Start</Button>);
     const button = screen.getByRole("button", { name: "Start" });
     expect(button).toBeInTheDocument();
-    expect(button).toHaveClass("btn");
-    expect(button).toHaveClass("btn-primary");
+    expect(button).toHaveClass("button");
+    expect(button).toHaveClass("primary");
   });
 });

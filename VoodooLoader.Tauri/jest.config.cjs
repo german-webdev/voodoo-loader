@@ -15,7 +15,8 @@ module.exports = {
     ],
   },
   moduleNameMapper: {
-    "\\.(css|less|scss|sass)$": "identity-obj-proxy",
+    "\\.module\\.(css|less|scss|sass)$": "<rootDir>/src/shared/config/jest/cssModuleProxy.cjs",
+    "\\.(css|less|scss|sass)$": "<rootDir>/src/shared/config/jest/styleMock.cjs",
     "^(\\.{1,2}/.*)\\.js$": "$1",
   },
   collectCoverageFrom: ["src/**/*.{ts,tsx}", "!src/main.tsx", "!src/vite-env.d.ts"],

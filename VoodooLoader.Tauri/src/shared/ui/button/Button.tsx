@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes } from "react";
+import styles from "./Button.module.css";
 
 type ButtonVariant = "primary" | "ghost" | "mini";
 
@@ -7,12 +8,14 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantClassMap: Record<ButtonVariant, string> = {
-  primary: "btn btn-primary",
-  ghost: "btn btn-ghost",
-  mini: "btn btn-mini",
+  primary: styles.primary || "primary",
+  ghost: styles.ghost || "ghost",
+  mini: styles.mini || "mini",
 };
 
 export function Button({ variant = "ghost", className = "", ...props }: ButtonProps) {
-  const resolvedClassName = `${variantClassMap[variant]} ${className}`.trim();
+  const resolvedClassName = [styles.button || "button", variantClassMap[variant], className]
+    .filter(Boolean)
+    .join(" ");
   return <button {...props} className={resolvedClassName} />;
 }
