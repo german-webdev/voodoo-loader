@@ -61,3 +61,15 @@ Conventional Commits:
 
 Текущий цикл — миграция на `Tauri v2` в папке `VoodooLoader.Tauri/`.
 Legacy-код сохранён архивом в `.archive/` и не используется как активная кодовая база.
+
+## 6. Required Checks for Tauri PR
+
+Перед PR в `development`:
+
+1. В `VoodooLoader.Tauri/`:
+   - `npm ci`
+   - `npm run build`
+2. Проверить, что в PR нет случайных изменений из `.archive/` и `.tmp/`.
+
+CI check:
+- GitHub Actions workflow: `.github/workflows/tauri-qa.yml`
