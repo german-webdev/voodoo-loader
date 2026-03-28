@@ -19,6 +19,9 @@
     "storybook": "storybook dev -p 6006",
     "storybook:build": "storybook build",
     "check": "npm run lint && npm run typecheck && npm run test",
+    "check:frontend:ci": "npm run check && npm run build && npm run storybook:build && npx playwright install chromium && npm run e2e",
+    "check:rust": "node ./scripts/run-rust-checks.cjs",
+    "check:prepush": "npm run check:frontend:ci && npm run check:rust",
     "prepare": "cd .. && npx husky VoodooLoader.Tauri/.husky",
     "preview": "serve dist -l 4173",
     "tauri": "tauri"
