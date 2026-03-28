@@ -1,81 +1,63 @@
 # Contributing Guide
 
-This repository uses a branch + PR workflow.
-Direct commits to `master` are not allowed for feature work.
+Этот репозиторий использует flow:
+
+- `master` -> стабильный релиз.
+- `development` -> интеграционная ветка.
+- `feature/*` -> рабочие ветки под отдельные задачи.
+
+Прямые коммиты в `master` запрещены.
 
 ## 1. Branch Strategy
 
-Create a development branch for every change from latest `master`.
+1. Новая задача стартует от `development`.
+2. Формат ветки:
+- `feature/<short-name>`
+- `feature/<ticket>-<short-name>`
+3. Merge только через PR обратно в `development`.
+4. В `master` попадает только релизный PR из `development`.
 
-Branch format:
-- `dev/<type>/<short-name>`
-- `dev/<type>/<ticket>-<short-name>`
+Примеры:
+- `feature/tauri-bootstrap`
+- `feature/queue-table-v2`
+- `feature/update-flow`
 
-Allowed `<type>`:
-- `feat` - new functionality
-- `fix` - bug fix
-- `hotfix` - urgent production fix
-- `refactor` - code cleanup without behavior change
-- `test` - tests only
-- `docs` - documentation only
-- `chore` - maintenance/tooling
-- `ci` - pipeline/configuration
-- `release` - release prep
+## 2. Pull Request Rules
 
-Examples:
-- `dev/feat/update-checker`
-- `dev/fix/drag-drop-row-loss`
-- `dev/test/update-service`
-- `dev/release/0.1.1`
+- PR для фич: `feature/*` -> `development`.
+- PR для релиза: `development` -> `master`.
+- В PR обязательно:
+- что сделано,
+- как проверено (тесты/сборка),
+- риски/ограничения.
+- Изменения требований фиксируются в `PRD.md`.
+- Пользовательские изменения фиксируются в `CHANGELOG.md`.
 
-## 2. Commit Message Format
+## 3. Beta Build Policy
 
-Use Conventional Commits:
+- После merge в `development` должна запускаться beta-сборка.
+- Бета-теги/релизы:
+- `vX.Y.Z-beta.N`
+- В `master` релиз идёт только после:
+- зеленых тестов,
+- успешной beta-сборки,
+- smoke-проверки ключевого функционала.
 
-`<type>(<scope>): <short imperative summary>`
+## 4. Commit Message Format
 
-Where `<type>` is one of:
+Conventional Commits:
+
+`<type>(<scope>): <short summary>`
+
+Типы:
 - `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `ci`, `build`, `perf`, `revert`
 
-Examples:
-- `feat(update): add GitHub Releases check flow`
-- `fix(queue): prevent row loss during drag and drop`
-- `test(update): cover semver comparison edge cases`
-- `docs(prd): add update workflow requirements`
+Примеры:
+- `feat(tauri): add app shell and command bridge`
+- `fix(queue): stabilize reorder persistence`
+- `ci(beta): publish beta artifact from development`
 
-Rules:
-- Summary length: up to ~72 characters.
-- Use present tense, imperative style.
-- One logical change per commit.
+## 5. Scope for Current Cycle
 
-## 3. Required Pre-PR Checks
-
-Before push / PR, run:
-
-```powershell
-$env:PYTHONPATH="$PWD\src"
-.\.venv\Scripts\python.exe -m ruff check src tests
-.\.venv\Scripts\python.exe -m pytest -q
-```
-
-If relevant, also run:
-
-```powershell
-.\.venv\Scripts\python.exe -m mypy src/voodoo_loader
-```
-
-## 4. Pull Request Rules
-
-- Open PR from `dev/...` branch into `master`.
-- PR title should follow commit style (recommended):
-  - `feat(scope): ...`
-  - `fix(scope): ...`
-- Include test evidence and risk notes.
-- Update `PRD.md` when behavior/requirements change.
-- Update `CHANGELOG.md` for user-visible changes.
-
-## 5. Release and Versioning
-
-- Use SemVer: `MAJOR.MINOR.PATCH` with optional pre-release suffix (`-alpha`, `-beta`, `-rc`).
-- Tags must match version: `vX.Y.Z` or `vX.Y.Z-alpha`.
-- Each release must have patch notes in `CHANGELOG.md`.
+Текущий цикл — миграция на `Tauri v2` в папке `VoodooLoader.Tauri/`.
+Legacy-код сохранён архивом в `.archive/` и не используется как активная кодовая база.
