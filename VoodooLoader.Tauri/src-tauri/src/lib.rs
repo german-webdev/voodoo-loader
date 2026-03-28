@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use rfd::FileDialog;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -50,6 +51,7 @@ struct QueueRuntime {
     next_id: u64,
     ticker_active: bool,
     is_running: bool,
+    max_simultaneous_downloads: u32,
     items: Vec<QueueItem>,
     logs: Vec<LogEntry>,
 }
@@ -67,6 +69,10 @@ struct PreviewCommandInput {
     extra_headers: Option<String>,
     continue_download: bool,
     max_connections: u32,
+    connections: u32,
+    splits: u32,
+    chunk_size: Option<String>,
+    user_agent: Option<String>,
 }
 
 fn now_timestamp() -> String {
@@ -106,6 +112,18 @@ fn file_name_from_url(url: &str) -> String {
         }
     }
     "download.bin".to_string()
+}
+
+fn simulated_total_size_mb(seed: u64) -> u64 {
+    256 + (seed % 12) * 128
+}
+
+fn format_total_size(mb: u64) -> String {
+    if mb >= 1024 {
+        format!("{:.1} GB", (mb as f64) / 1024.0)
+    } else {
+        format!("{mb} MB")
+    }
 }
 
 fn parse_url_lines(raw: &str) -> Vec<String> {
@@ -154,52 +172,77 @@ fn run_queue_tick(runtime: &mut QueueRuntime) {
         return;
     }
 
-    let active_idx = runtime.items.iter().position(|item| is_active_status(&item.status));
-
-    let Some(idx) = active_idx else {
-        return;
+    let max_active = if runtime.max_simultaneous_downloads == 0 {
+        usize::MAX
+    } else {
+        runtime.max_simultaneous_downloads as usize
     };
 
-    let mut log_to_push: Option<(String, String)> = None;
-    {
-        let item = &mut runtime.items[idx];
+    let mut events: Vec<(String, String)> = Vec::new();
 
-        if item.status.eq_ignore_ascii_case("queued") {
-            item.status = "Downloading".to_string();
-            item.speed = "2.4 MB/s".to_string();
-            item.eta = "00:12".to_string();
-            log_to_push = Some((
-                "INFO".to_string(),
-                format!("Started download: {}", item.file_name),
-            ));
-        } else {
-            item.progress = (item.progress + 11.5).clamp(0.0, 100.0);
+    let mut downloading_count = runtime
+        .items
+        .iter()
+        .filter(|item| item.status.eq_ignore_ascii_case("downloading"))
+        .count();
 
-            let should_fail_once =
-                item.progress >= 55.0 && item.attempts == 0 && item.id.ends_with('3');
-            if should_fail_once {
-                item.status = "Failed".to_string();
-                item.speed = "0 MB/s".to_string();
-                item.eta = "--".to_string();
-                item.attempts += 1;
-                log_to_push = Some((
-                    "ERROR".to_string(),
-                    format!("Failed: {} (simulated timeout)", item.file_name),
-                ));
-            } else if item.progress >= 100.0 {
-                item.progress = 100.0;
-                item.status = "Completed".to_string();
-                item.speed = "0 MB/s".to_string();
-                item.eta = "--".to_string();
-                log_to_push = Some((
-                    "SUCCESS".to_string(),
-                    format!("Completed: {}", item.file_name),
+    if downloading_count < max_active {
+        for item in runtime.items.iter_mut() {
+            if downloading_count >= max_active {
+                break;
+            }
+            if item.status.eq_ignore_ascii_case("queued") {
+                item.status = "Downloading".to_string();
+                item.speed = "2.4 MB/s".to_string();
+                item.eta = "00:12".to_string();
+                downloading_count += 1;
+                events.push((
+                    "INFO".to_string(),
+                    format!("Started download: {}", item.file_name),
                 ));
             }
         }
     }
 
-    if let Some((level, message)) = log_to_push {
+    for item in runtime.items.iter_mut() {
+        if !item.status.eq_ignore_ascii_case("downloading") {
+            continue;
+        }
+
+        let dynamic_step = 5.0 + ((item.created_order % 6) as f32 * 1.9);
+        item.progress = (item.progress + dynamic_step).clamp(0.0, 100.0);
+
+        let should_fail_once =
+            item.progress >= 55.0 && item.attempts == 0 && item.id.ends_with('3');
+        if should_fail_once {
+            item.status = "Failed".to_string();
+            item.speed = "0 MB/s".to_string();
+            item.eta = "--".to_string();
+            item.attempts += 1;
+            events.push((
+                "ERROR".to_string(),
+                format!("Failed: {} (simulated timeout)", item.file_name),
+            ));
+            continue;
+        }
+
+        if item.progress >= 100.0 {
+            item.progress = 100.0;
+            item.status = "Completed".to_string();
+            item.speed = "0 MB/s".to_string();
+            item.eta = "--".to_string();
+            events.push((
+                "SUCCESS".to_string(),
+                format!("Completed: {}", item.file_name),
+            ));
+            continue;
+        }
+
+        let speed_value = 1.4 + ((item.created_order % 7) as f32 * 0.35);
+        item.speed = format!("{speed_value:.1} MB/s");
+    }
+
+    for (level, message) in events {
         push_log(runtime, &level, message);
     }
 }
@@ -322,6 +365,8 @@ fn add_queue_item(
             .map_err(|_| "queue runtime lock failed".to_string())?;
 
         runtime.next_id += 1;
+        let next_id = runtime.next_id;
+        let total_size = format_total_size(simulated_total_size_mb(next_id));
         let resolved_file_name = file_name
             .as_deref()
             .filter(|value| !value.trim().is_empty())
@@ -329,7 +374,7 @@ fn add_queue_item(
             .unwrap_or_else(|| file_name_from_url(&url));
 
         runtime.items.push(QueueItem {
-            id: format!("q-{0:06}", runtime.next_id),
+            id: format!("q-{0:06}", next_id),
             selected: false,
             file_name: resolved_file_name.clone(),
             url: url.trim().to_string(),
@@ -338,10 +383,10 @@ fn add_queue_item(
             progress: 0.0,
             speed: "0 MB/s".to_string(),
             eta: "--".to_string(),
-            total_size: "unknown".to_string(),
+            total_size,
             priority: "Medium".to_string(),
             attempts: 0,
-            created_order: runtime.next_id,
+            created_order: next_id,
         });
 
         push_log(
@@ -376,8 +421,10 @@ fn add_queue_items_from_text(
 
         for url in urls.iter() {
             runtime.next_id += 1;
+            let next_id = runtime.next_id;
+            let total_size = format_total_size(simulated_total_size_mb(next_id));
             runtime.items.push(QueueItem {
-                id: format!("q-{0:06}", runtime.next_id),
+                id: format!("q-{0:06}", next_id),
                 selected: false,
                 file_name: file_name_from_url(url),
                 url: url.clone(),
@@ -386,10 +433,10 @@ fn add_queue_items_from_text(
                 progress: 0.0,
                 speed: "0 MB/s".to_string(),
                 eta: "--".to_string(),
-                total_size: "unknown".to_string(),
+                total_size,
                 priority: "Medium".to_string(),
                 attempts: 0,
-                created_order: runtime.next_id,
+                created_order: next_id,
             });
         }
 
@@ -542,6 +589,121 @@ fn remove_failed_items(
 }
 
 #[tauri::command]
+fn set_queue_item_selected(
+    app: AppHandle,
+    state: State<'_, Arc<QueueStore>>,
+    id: String,
+    selected: bool,
+) -> Result<QueueSnapshot, String> {
+    let snapshot = {
+        let mut runtime = state
+            .runtime
+            .lock()
+            .map_err(|_| "queue runtime lock failed".to_string())?;
+
+        if let Some(item) = runtime.items.iter_mut().find(|item| item.id == id) {
+            item.selected = selected;
+        }
+
+        snapshot_from_runtime(&runtime)
+    };
+
+    emit_snapshot(&app, &snapshot)?;
+    Ok(snapshot)
+}
+
+#[tauri::command]
+fn set_all_queue_items_selected(
+    app: AppHandle,
+    state: State<'_, Arc<QueueStore>>,
+    selected: bool,
+) -> Result<QueueSnapshot, String> {
+    let snapshot = {
+        let mut runtime = state
+            .runtime
+            .lock()
+            .map_err(|_| "queue runtime lock failed".to_string())?;
+
+        for item in runtime.items.iter_mut() {
+            item.selected = selected;
+        }
+
+        snapshot_from_runtime(&runtime)
+    };
+
+    emit_snapshot(&app, &snapshot)?;
+    Ok(snapshot)
+}
+
+#[tauri::command]
+fn remove_selected_items(
+    app: AppHandle,
+    state: State<'_, Arc<QueueStore>>,
+) -> Result<QueueSnapshot, String> {
+    let snapshot = {
+        let mut runtime = state
+            .runtime
+            .lock()
+            .map_err(|_| "queue runtime lock failed".to_string())?;
+
+        let before = runtime.items.len();
+        runtime.items.retain(|item| !item.selected);
+        let removed = before.saturating_sub(runtime.items.len());
+
+        if removed == 0 {
+            push_log(&mut runtime, "WARN", "No selected items to remove".to_string());
+        } else {
+            push_log(
+                &mut runtime,
+                "INFO",
+                format!("Removed {removed} selected item(s)"),
+            );
+        }
+
+        snapshot_from_runtime(&runtime)
+    };
+
+    emit_snapshot(&app, &snapshot)?;
+    Ok(snapshot)
+}
+
+#[tauri::command]
+fn retry_selected_items(
+    app: AppHandle,
+    state: State<'_, Arc<QueueStore>>,
+) -> Result<QueueSnapshot, String> {
+    let snapshot = {
+        let mut runtime = state
+            .runtime
+            .lock()
+            .map_err(|_| "queue runtime lock failed".to_string())?;
+
+        let mut retried_count = 0usize;
+        for item in runtime.items.iter_mut() {
+            if item.selected && is_retryable_status(&item.status) {
+                reset_item_for_retry(item);
+                retried_count += 1;
+            }
+        }
+
+        if retried_count == 0 {
+            push_log(&mut runtime, "WARN", "No selected failed items to retry".to_string());
+        } else {
+            push_log(
+                &mut runtime,
+                "INFO",
+                format!("Retried {retried_count} selected item(s)"),
+            );
+        }
+
+        snapshot_from_runtime(&runtime)
+    };
+
+    emit_snapshot(&app, &snapshot)?;
+    Ok(snapshot)
+}
+
+#[tauri::command]
 fn set_queue_item_priority(
     app: AppHandle,
     state: State<'_, Arc<QueueStore>>,
@@ -579,6 +741,56 @@ fn set_queue_item_priority(
                 &mut runtime,
                 "WARN",
                 format!("Priority update skipped: item not found ({id})"),
+            );
+        }
+
+        snapshot_from_runtime(&runtime)
+    };
+
+    emit_snapshot(&app, &snapshot)?;
+    Ok(snapshot)
+}
+
+#[tauri::command]
+fn set_selected_items_priority(
+    app: AppHandle,
+    state: State<'_, Arc<QueueStore>>,
+    priority: String,
+) -> Result<QueueSnapshot, String> {
+    let snapshot = {
+        let mut runtime = state
+            .runtime
+            .lock()
+            .map_err(|_| "queue runtime lock failed".to_string())?;
+
+        let normalized = priority.trim().to_ascii_lowercase();
+        let resolved = if normalized == "high" {
+            "High"
+        } else if normalized == "low" {
+            "Low"
+        } else {
+            "Medium"
+        };
+
+        let mut changed = 0usize;
+        for item in runtime.items.iter_mut() {
+            if item.selected {
+                item.priority = resolved.to_string();
+                changed += 1;
+            }
+        }
+
+        if changed == 0 {
+            push_log(
+                &mut runtime,
+                "WARN",
+                "Priority change skipped: no selected items".to_string(),
+            );
+        } else {
+            push_log(
+                &mut runtime,
+                "INFO",
+                format!("Priority updated to {resolved} for {changed} selected item(s)"),
             );
         }
 
@@ -640,6 +852,52 @@ fn move_queue_item(
 }
 
 #[tauri::command]
+fn reorder_queue_item(
+    app: AppHandle,
+    state: State<'_, Arc<QueueStore>>,
+    dragged_id: String,
+    target_id: String,
+) -> Result<QueueSnapshot, String> {
+    let snapshot = {
+        let mut runtime = state
+            .runtime
+            .lock()
+            .map_err(|_| "queue runtime lock failed".to_string())?;
+
+        let source_index = runtime.items.iter().position(|item| item.id == dragged_id);
+        let target_index = runtime.items.iter().position(|item| item.id == target_id);
+
+        if let (Some(source), Some(target)) = (source_index, target_index) {
+            if source != target {
+                let moved_item = runtime.items.remove(source);
+                let final_target = if source < target {
+                    target.saturating_sub(1)
+                } else {
+                    target
+                };
+                runtime.items.insert(final_target, moved_item);
+            }
+            push_log(
+                &mut runtime,
+                "INFO",
+                format!("Reordered item {dragged_id} before {target_id}"),
+            );
+        } else {
+            push_log(
+                &mut runtime,
+                "WARN",
+                format!("Reorder skipped: item not found ({dragged_id} -> {target_id})"),
+            );
+        }
+
+        snapshot_from_runtime(&runtime)
+    };
+
+    emit_snapshot(&app, &snapshot)?;
+    Ok(snapshot)
+}
+
+#[tauri::command]
 fn sort_queue(
     app: AppHandle,
     state: State<'_, Arc<QueueStore>>,
@@ -682,12 +940,17 @@ fn sort_queue(
 fn start_queue(
     app: AppHandle,
     state: State<'_, Arc<QueueStore>>,
+    max_simultaneous_downloads: Option<u32>,
 ) -> Result<QueueSnapshot, String> {
     let should_spawn = {
         let mut runtime = state
             .runtime
             .lock()
             .map_err(|_| "queue runtime lock failed".to_string())?;
+
+        if let Some(max) = max_simultaneous_downloads {
+            runtime.max_simultaneous_downloads = max;
+        }
 
         if runtime.items.is_empty() {
             push_log(
@@ -784,6 +1047,21 @@ fn clear_queue(
 }
 
 #[tauri::command]
+fn pick_folder() -> Option<String> {
+    FileDialog::new()
+        .pick_folder()
+        .map(|path| path.display().to_string())
+}
+
+#[tauri::command]
+fn pick_file() -> Option<String> {
+    FileDialog::new()
+        .add_filter("Executable", &["exe"])
+        .pick_file()
+        .map(|path| path.display().to_string())
+}
+
+#[tauri::command]
 fn build_preview_command(input: PreviewCommandInput) -> Result<String, String> {
     if input.url.trim().is_empty() {
         return Err("URL is required for command preview".to_string());
@@ -809,6 +1087,26 @@ fn build_preview_command(input: PreviewCommandInput) -> Result<String, String> {
             "--max-connection-per-server={}",
             input.max_connections
         ));
+    }
+
+    if input.connections > 0 {
+        args.push(format!("-x {}", input.connections));
+    }
+
+    if input.splits > 0 {
+        args.push(format!("-s {}", input.splits));
+    }
+
+    if let Some(chunk_size) = input.chunk_size.as_deref() {
+        if !chunk_size.trim().is_empty() {
+            args.push(format!("-k {}", shell_quote(chunk_size.trim())));
+        }
+    }
+
+    if let Some(user_agent) = input.user_agent.as_deref() {
+        if !user_agent.trim().is_empty() {
+            args.push(format!("--user-agent={}", shell_quote(user_agent.trim())));
+        }
     }
 
     let mode = input.auth_mode.trim().to_ascii_lowercase();
@@ -856,15 +1154,82 @@ pub fn run() {
             retry_queue_item,
             retry_failed_items,
             remove_failed_items,
+            set_queue_item_selected,
+            set_all_queue_items_selected,
+            remove_selected_items,
+            retry_selected_items,
             set_queue_item_priority,
+            set_selected_items_priority,
             move_queue_item,
+            reorder_queue_item,
             sort_queue,
             start_queue,
             stop_queue,
             clear_logs,
             clear_queue,
+            pick_folder,
+            pick_file,
             build_preview_command
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_url_lines_skips_comments_and_empty_lines() {
+        let parsed = parse_url_lines(
+            "
+            # comment
+            https://example.com/file1.bin
+
+            https://example.com/file2.bin
+            ",
+        );
+
+        assert_eq!(parsed.len(), 2);
+        assert_eq!(parsed[0], "https://example.com/file1.bin");
+        assert_eq!(parsed[1], "https://example.com/file2.bin");
+    }
+
+    #[test]
+    fn priority_rank_orders_known_values() {
+        assert!(priority_rank("high") < priority_rank("medium"));
+        assert!(priority_rank("medium") < priority_rank("low"));
+        assert!(priority_rank("low") < priority_rank("unknown"));
+    }
+
+    #[test]
+    fn format_total_size_switches_to_gb() {
+        assert_eq!(format_total_size(512), "512 MB");
+        assert_eq!(format_total_size(2048), "2.0 GB");
+    }
+
+    #[test]
+    fn build_preview_command_masks_sensitive_token() {
+        let input = PreviewCommandInput {
+            url: "https://example.com/archive.zip".to_string(),
+            destination: "C:\\Downloads".to_string(),
+            file_name: None,
+            auth_mode: "token".to_string(),
+            token: Some("super-secret-token".to_string()),
+            username: None,
+            password: None,
+            extra_headers: None,
+            continue_download: true,
+            max_connections: 0,
+            connections: 8,
+            splits: 8,
+            chunk_size: Some("1M".to_string()),
+            user_agent: Some("Mozilla/5.0".to_string()),
+        };
+
+        let command = build_preview_command(input).expect("preview command should be generated");
+        assert!(command.contains("Authorization: Bearer"));
+        assert!(!command.contains("super-secret-token"));
+        assert!(command.contains("***"));
+    }
 }
