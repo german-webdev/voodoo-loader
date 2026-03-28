@@ -209,6 +209,15 @@ body {
   margin-bottom: 10px;
 }
 
+.progress-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .progress-title {
   font-weight: 800;
 }
@@ -294,6 +303,50 @@ th {
   padding: 26px 12px;
 }
 
+.file-col small {
+  display: block;
+  max-width: 340px;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--muted);
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.status-queued {
+  color: #3f5578;
+  background: #eaf0fb;
+}
+
+.status-downloading {
+  color: #8f4b00;
+  background: #ffe9cc;
+}
+
+.status-completed {
+  color: #0a6930;
+  background: #d6f6e2;
+}
+
+.btn-mini {
+  min-height: 30px;
+  font-size: 12px;
+  padding: 0 10px;
+  color: var(--primary-2);
+  border-color: #c9daf7;
+  background: #f7fbff;
+}
+
 .logs-placeholder {
   border: 1px solid var(--line);
   border-radius: 10px;
@@ -303,6 +356,11 @@ th {
   font-size: 12px;
   min-height: 110px;
   padding: 12px;
+}
+
+.log-error {
+  color: #b0133f;
+  margin-bottom: 8px;
 }
 
 @keyframes rise {
