@@ -362,6 +362,13 @@ th {
   background: #d6f6e2;
 }
 
+.queue-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .status-failed {
   color: #9b1236;
   background: #ffdce5;
@@ -379,6 +386,13 @@ th {
   color: var(--primary-2);
   border-color: #c9daf7;
   background: #f7fbff;
+}
+
+.compact-select {
+  min-height: 30px;
+  padding: 4px 8px;
+  min-width: 92px;
+  font-size: 12px;
 }
 
 .row-actions {

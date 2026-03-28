@@ -21,6 +21,7 @@ struct QueueItem {
     total_size: String,
     priority: String,
     attempts: u32,
+    created_order: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -82,6 +83,19 @@ fn is_active_status(status: &str) -> bool {
 
 fn is_retryable_status(status: &str) -> bool {
     status.eq_ignore_ascii_case("failed") || status.eq_ignore_ascii_case("canceled")
+}
+
+fn priority_rank(priority: &str) -> u8 {
+    let normalized = priority.trim().to_ascii_lowercase();
+    if normalized == "high" {
+        0
+    } else if normalized == "medium" {
+        1
+    } else if normalized == "low" {
+        2
+    } else {
+        3
+    }
 }
 
 fn file_name_from_url(url: &str) -> String {
@@ -327,6 +341,7 @@ fn add_queue_item(
             total_size: "unknown".to_string(),
             priority: "Medium".to_string(),
             attempts: 0,
+            created_order: runtime.next_id,
         });
 
         push_log(
@@ -374,6 +389,7 @@ fn add_queue_items_from_text(
                 total_size: "unknown".to_string(),
                 priority: "Medium".to_string(),
                 attempts: 0,
+                created_order: runtime.next_id,
             });
         }
 
@@ -516,6 +532,143 @@ fn remove_failed_items(
                 "INFO",
                 format!("Removed {removed} failed item(s)"),
             );
+        }
+
+        snapshot_from_runtime(&runtime)
+    };
+
+    emit_snapshot(&app, &snapshot)?;
+    Ok(snapshot)
+}
+
+#[tauri::command]
+fn set_queue_item_priority(
+    app: AppHandle,
+    state: State<'_, Arc<QueueStore>>,
+    id: String,
+    priority: String,
+) -> Result<QueueSnapshot, String> {
+    let snapshot = {
+        let mut runtime = state
+            .runtime
+            .lock()
+            .map_err(|_| "queue runtime lock failed".to_string())?;
+
+        let normalized = priority.trim().to_ascii_lowercase();
+        let resolved = if normalized == "high" {
+            "High"
+        } else if normalized == "low" {
+            "Low"
+        } else {
+            "Medium"
+        };
+
+        if let Some(index) = runtime.items.iter().position(|item| item.id == id) {
+            let file_name = {
+                let item = &mut runtime.items[index];
+                item.priority = resolved.to_string();
+                item.file_name.clone()
+            };
+            push_log(
+                &mut runtime,
+                "INFO",
+                format!("Priority updated: {} -> {}", file_name, resolved),
+            );
+        } else {
+            push_log(
+                &mut runtime,
+                "WARN",
+                format!("Priority update skipped: item not found ({id})"),
+            );
+        }
+
+        snapshot_from_runtime(&runtime)
+    };
+
+    emit_snapshot(&app, &snapshot)?;
+    Ok(snapshot)
+}
+
+#[tauri::command]
+fn move_queue_item(
+    app: AppHandle,
+    state: State<'_, Arc<QueueStore>>,
+    id: String,
+    direction: String,
+) -> Result<QueueSnapshot, String> {
+    let snapshot = {
+        let mut runtime = state
+            .runtime
+            .lock()
+            .map_err(|_| "queue runtime lock failed".to_string())?;
+
+        if let Some(index) = runtime.items.iter().position(|item| item.id == id) {
+            let dir = direction.trim().to_ascii_lowercase();
+            let mut target = index;
+            if dir == "up" {
+                target = index.saturating_sub(1);
+            } else if dir == "down" {
+                target = (index + 1).min(runtime.items.len().saturating_sub(1));
+            } else if dir == "top" {
+                target = 0;
+            } else if dir == "bottom" {
+                target = runtime.items.len().saturating_sub(1);
+            }
+
+            if target != index {
+                runtime.items.swap(index, target);
+            }
+
+            push_log(
+                &mut runtime,
+                "INFO",
+                format!("Moved item {id} ({direction})"),
+            );
+        } else {
+            push_log(
+                &mut runtime,
+                "WARN",
+                format!("Move skipped: item not found ({id})"),
+            );
+        }
+
+        snapshot_from_runtime(&runtime)
+    };
+
+    emit_snapshot(&app, &snapshot)?;
+    Ok(snapshot)
+}
+
+#[tauri::command]
+fn sort_queue(
+    app: AppHandle,
+    state: State<'_, Arc<QueueStore>>,
+    sort_by: String,
+) -> Result<QueueSnapshot, String> {
+    let snapshot = {
+        let mut runtime = state
+            .runtime
+            .lock()
+            .map_err(|_| "queue runtime lock failed".to_string())?;
+
+        let key = sort_by.trim().to_ascii_lowercase();
+        if key == "extension" {
+            runtime.items.sort_by(|a, b| {
+                let ext_a = a.file_name.rsplit('.').next().unwrap_or("").to_ascii_lowercase();
+                let ext_b = b.file_name.rsplit('.').next().unwrap_or("").to_ascii_lowercase();
+                ext_a.cmp(&ext_b).then(a.created_order.cmp(&b.created_order))
+            });
+            push_log(&mut runtime, "INFO", "Queue sorted by extension".to_string());
+        } else if key == "priority" {
+            runtime.items.sort_by(|a, b| {
+                priority_rank(&a.priority)
+                    .cmp(&priority_rank(&b.priority))
+                    .then(a.created_order.cmp(&b.created_order))
+            });
+            push_log(&mut runtime, "INFO", "Queue sorted by priority".to_string());
+        } else {
+            runtime.items.sort_by_key(|item| item.created_order);
+            push_log(&mut runtime, "INFO", "Queue sorted by date added".to_string());
         }
 
         snapshot_from_runtime(&runtime)
@@ -703,6 +856,9 @@ pub fn run() {
             retry_queue_item,
             retry_failed_items,
             remove_failed_items,
+            set_queue_item_priority,
+            move_queue_item,
+            sort_queue,
             start_queue,
             stop_queue,
             clear_logs,

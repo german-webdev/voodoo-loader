@@ -46,11 +46,24 @@ type PreviewCommandInput = {
   maxConnections: number;
 };
 
+type PersistedUiSettings = {
+  destination: string;
+  speedPreset: string;
+  authMode: AuthMode;
+  token: string;
+  username: string;
+  extraHeaders: string;
+  continueDownload: boolean;
+  maxConnections: number;
+};
+
 const EMPTY_SNAPSHOT: QueueSnapshot = {
   isRunning: false,
   items: [],
   logs: [],
 };
+
+const SETTINGS_KEY = "voodoo-loader-tauri-ui-settings";
 
 function App() {
   const [urlInput, setUrlInput] = useState("");
@@ -69,6 +82,47 @@ function App() {
   const [snapshot, setSnapshot] = useState<QueueSnapshot>(EMPTY_SNAPSHOT);
   const [actionError, setActionError] = useState<string | null>(null);
   const [previewCommand, setPreviewCommand] = useState("");
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SETTINGS_KEY);
+      if (!raw) return;
+      const stored = JSON.parse(raw) as PersistedUiSettings;
+      setDestination(stored.destination || "C:\\Downloads\\VoodooLoader");
+      setSpeedPreset(stored.speedPreset || "Balanced");
+      setAuthMode(stored.authMode || "none");
+      setToken(stored.token || "");
+      setUsername(stored.username || "");
+      setExtraHeaders(stored.extraHeaders || "");
+      setContinueDownload(Boolean(stored.continueDownload));
+      setMaxConnections(Number(stored.maxConnections || 8));
+    } catch {
+      // Ignore malformed storage.
+    }
+  }, []);
+
+  useEffect(() => {
+    const payload: PersistedUiSettings = {
+      destination,
+      speedPreset,
+      authMode,
+      token,
+      username,
+      extraHeaders,
+      continueDownload,
+      maxConnections,
+    };
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(payload));
+  }, [
+    destination,
+    speedPreset,
+    authMode,
+    token,
+    username,
+    extraHeaders,
+    continueDownload,
+    maxConnections,
+  ]);
 
   useEffect(() => {
     let isMounted = true;
@@ -158,6 +212,27 @@ function App() {
       setSnapshot(next);
       setImportText("");
       setShowImport(false);
+    });
+  }
+
+  async function sortQueue(sortBy: "added" | "extension" | "priority") {
+    await runAction(async () => {
+      const next = await invoke<QueueSnapshot>("sort_queue", { sortBy });
+      setSnapshot(next);
+    });
+  }
+
+  async function moveItem(id: string, direction: "up" | "down" | "top" | "bottom") {
+    await runAction(async () => {
+      const next = await invoke<QueueSnapshot>("move_queue_item", { id, direction });
+      setSnapshot(next);
+    });
+  }
+
+  async function setItemPriority(id: string, priority: "High" | "Medium" | "Low") {
+    await runAction(async () => {
+      const next = await invoke<QueueSnapshot>("set_queue_item_priority", { id, priority });
+      setSnapshot(next);
     });
   }
 
@@ -455,7 +530,18 @@ function App() {
       <section className="panel queue-card">
         <div className="section-head">
           <h2>Download queue</h2>
-          <span className="section-chip">{snapshot.items.length} items</span>
+          <div className="queue-tools">
+            <button type="button" className="btn btn-mini" onClick={() => sortQueue("added")}>
+              Sort: Added
+            </button>
+            <button type="button" className="btn btn-mini" onClick={() => sortQueue("extension")}>
+              Sort: Ext
+            </button>
+            <button type="button" className="btn btn-mini" onClick={() => sortQueue("priority")}>
+              Sort: Priority
+            </button>
+            <span className="section-chip">{snapshot.items.length} items</span>
+          </div>
         </div>
         <div className="table-wrap">
           <table>
@@ -496,8 +582,26 @@ function App() {
                     <td>{item.speed}</td>
                     <td>{item.eta}</td>
                     <td>{item.totalSize}</td>
-                    <td>{item.priority}</td>
+                    <td>
+                      <select
+                        className="input select compact-select"
+                        value={item.priority}
+                        onChange={(event) =>
+                          setItemPriority(item.id, event.currentTarget.value as "High" | "Medium" | "Low")
+                        }
+                      >
+                        <option>High</option>
+                        <option>Medium</option>
+                        <option>Low</option>
+                      </select>
+                    </td>
                     <td className="row-actions">
+                      <button type="button" className="btn btn-mini" onClick={() => moveItem(item.id, "up")}>
+                        Up
+                      </button>
+                      <button type="button" className="btn btn-mini" onClick={() => moveItem(item.id, "down")}>
+                        Down
+                      </button>
                       {item.status.toLowerCase() === "failed" ? (
                         <button type="button" className="btn btn-mini" onClick={() => retryItem(item.id)}>
                           Retry
