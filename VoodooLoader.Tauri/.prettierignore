@@ -1,0 +1,7 @@
+dist
+coverage
+node_modules
+storybook-static
+playwright-report
+test-results
+src-tauri/target
