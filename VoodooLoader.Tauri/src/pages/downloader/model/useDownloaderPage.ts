@@ -2,16 +2,17 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { openPath, revealItemInDir } from "@tauri-apps/plugin-opener";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import type * as React from "react";
+import { useDispatch, useSelector } from "react-redux";
 import {
-  DEFAULT_DESTINATION,
   DEFAULT_SETTINGS,
-  EMPTY_SNAPSHOT,
   SETTINGS_KEY,
   applyPreset,
 } from "../../../features/settings/model/config";
 import { formatMb, parseSizeToMb, clampNonNegative } from "../../../shared/lib/numbers";
 import { joinWindowsPath } from "../../../shared/lib/paths";
+import { downloaderActions, type DownloaderState } from "./store/downloaderSlice";
 import type {
   ContextMenuState,
   MenuName,
@@ -95,37 +96,84 @@ export interface DownloaderPageController {
   exitApp: () => Promise<void>;
 }
 
+function resolveStateAction<T>(valueOrUpdater: React.SetStateAction<T>, current: T): T {
+  if (typeof valueOrUpdater === "function") {
+    return (valueOrUpdater as (prev: T) => T)(current);
+  }
+  return valueOrUpdater;
+}
+
 export function useDownloaderPage(): DownloaderPageController {
-  const [urlInput, setUrlInput] = useState("");
-  const [destination, setDestination] = useState(DEFAULT_DESTINATION);
-  const [fileName, setFileName] = useState("");
+  const dispatch = useDispatch();
+  const state = useSelector((rootState: { downloader: DownloaderState }) => rootState.downloader);
 
-  const [settings, setSettings] = useState<SettingsState>(DEFAULT_SETTINGS);
-  const [settingsDraft, setSettingsDraft] = useState<SettingsState | null>(null);
-
-  const [snapshot, setSnapshot] = useState<QueueSnapshot>(EMPTY_SNAPSHOT);
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [previewCommand, setPreviewCommand] = useState("");
-
-  const [activeMenu, setActiveMenu] = useState<MenuName | null>(null);
-  const [showLogs, setShowLogs] = useState(true);
-  const [showProgressDetails, setShowProgressDetails] = useState(false);
-  const [showAboutDialog, setShowAboutDialog] = useState(false);
-
-  const [queuePanelHeight, setQueuePanelHeight] = useState(230);
-  const [logsPanelHeight, setLogsPanelHeight] = useState(130);
-
-  const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
-  const [contextMenu, setContextMenu] = useState<ContextMenuState>({
-    visible: false,
-    x: 0,
-    y: 0,
-  });
+  const {
+    urlInput,
+    destination,
+    fileName,
+    settings,
+    settingsDraft,
+    snapshot,
+    actionError,
+    previewCommand,
+    activeMenu,
+    showLogs,
+    showProgressDetails,
+    showAboutDialog,
+    queuePanelHeight,
+    logsPanelHeight,
+    draggedItemId,
+    contextMenu,
+  } = state;
 
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const menuHostRef = useRef<HTMLDivElement | null>(null);
   const queuePanelRef = useRef<HTMLDivElement | null>(null);
   const logsPanelRef = useRef<HTMLDivElement | null>(null);
+
+  const setUrlInput = (value: string) => dispatch(downloaderActions.setUrlInput(value));
+  const setDestination = (value: string) => dispatch(downloaderActions.setDestination(value));
+  const setFileName = (value: string) => dispatch(downloaderActions.setFileName(value));
+
+  const setShowLogs: React.Dispatch<React.SetStateAction<boolean>> = (valueOrUpdater) => {
+    dispatch(downloaderActions.setShowLogs(resolveStateAction(valueOrUpdater, showLogs)));
+  };
+
+  const setShowProgressDetails: React.Dispatch<React.SetStateAction<boolean>> = (
+    valueOrUpdater,
+  ) => {
+    dispatch(
+      downloaderActions.setShowProgressDetails(
+        resolveStateAction(valueOrUpdater, showProgressDetails),
+      ),
+    );
+  };
+
+  const setShowAboutDialog: React.Dispatch<React.SetStateAction<boolean>> = (valueOrUpdater) => {
+    dispatch(
+      downloaderActions.setShowAboutDialog(resolveStateAction(valueOrUpdater, showAboutDialog)),
+    );
+  };
+
+  const setActionError: React.Dispatch<React.SetStateAction<string | null>> = (valueOrUpdater) => {
+    dispatch(downloaderActions.setActionError(resolveStateAction(valueOrUpdater, actionError)));
+  };
+
+  const setDraggedItemId: React.Dispatch<React.SetStateAction<string | null>> = (
+    valueOrUpdater,
+  ) => {
+    dispatch(downloaderActions.setDraggedItemId(resolveStateAction(valueOrUpdater, draggedItemId)));
+  };
+
+  const setContextMenu: React.Dispatch<React.SetStateAction<ContextMenuState>> = (
+    valueOrUpdater,
+  ) => {
+    dispatch(downloaderActions.setContextMenu(resolveStateAction(valueOrUpdater, contextMenu)));
+  };
+
+  const setSettings: React.Dispatch<React.SetStateAction<SettingsState>> = (valueOrUpdater) => {
+    dispatch(downloaderActions.setSettings(resolveStateAction(valueOrUpdater, settings)));
+  };
 
   useEffect(() => {
     try {
@@ -134,24 +182,25 @@ export function useDownloaderPage(): DownloaderPageController {
 
       const stored = JSON.parse(raw) as Partial<PersistedUiSettings>;
 
-      if (stored.destination) setDestination(stored.destination);
-      if (typeof stored.showLogs === "boolean") setShowLogs(stored.showLogs);
+      if (stored.destination) dispatch(downloaderActions.setDestination(stored.destination));
+      if (typeof stored.showLogs === "boolean")
+        dispatch(downloaderActions.setShowLogs(stored.showLogs));
       if (typeof stored.showProgressDetails === "boolean") {
-        setShowProgressDetails(stored.showProgressDetails);
+        dispatch(downloaderActions.setShowProgressDetails(stored.showProgressDetails));
       }
       if (typeof stored.queuePanelHeight === "number") {
-        setQueuePanelHeight(Math.max(160, stored.queuePanelHeight));
+        dispatch(downloaderActions.setQueuePanelHeight(Math.max(160, stored.queuePanelHeight)));
       }
       if (typeof stored.logsPanelHeight === "number") {
-        setLogsPanelHeight(Math.max(90, stored.logsPanelHeight));
+        dispatch(downloaderActions.setLogsPanelHeight(Math.max(90, stored.logsPanelHeight)));
       }
       if (stored.settings) {
-        setSettings((prev) => ({ ...prev, ...stored.settings }));
+        dispatch(downloaderActions.setSettings({ ...DEFAULT_SETTINGS, ...stored.settings }));
       }
     } catch {
       // Ignore malformed storage.
     }
-  }, []);
+  }, [dispatch]);
 
   useEffect(() => {
     const persisted: PersistedUiSettings = {
@@ -187,17 +236,20 @@ export function useDownloaderPage(): DownloaderPageController {
     async function bootstrap() {
       try {
         const initial = await invoke<QueueSnapshot>("queue_snapshot");
-        if (isMounted) setSnapshot(initial);
+        if (isMounted) dispatch(downloaderActions.setSnapshot(initial));
       } catch (error) {
-        if (isMounted) setActionError(`Backend unavailable: ${String(error)}`);
+        if (isMounted)
+          dispatch(downloaderActions.setActionError(`Backend unavailable: ${String(error)}`));
       }
 
       try {
         unlisten = await listen<QueueSnapshot>("queue://snapshot", (event) => {
-          if (isMounted) setSnapshot(event.payload);
+          if (isMounted) dispatch(downloaderActions.setSnapshot(event.payload));
         });
       } catch (error) {
-        if (isMounted) setActionError(`Event bridge unavailable: ${String(error)}`);
+        if (isMounted) {
+          dispatch(downloaderActions.setActionError(`Event bridge unavailable: ${String(error)}`));
+        }
       }
     }
 
@@ -207,21 +259,21 @@ export function useDownloaderPage(): DownloaderPageController {
       isMounted = false;
       if (unlisten) void unlisten();
     };
-  }, []);
+  }, [dispatch]);
 
   useEffect(() => {
     const onPointerDown = (event: MouseEvent) => {
       if (menuHostRef.current && !menuHostRef.current.contains(event.target as Node)) {
-        setActiveMenu(null);
+        dispatch(downloaderActions.setActiveMenu(null));
       }
       if (contextMenu.visible) {
-        setContextMenu((prev) => ({ ...prev, visible: false }));
+        dispatch(downloaderActions.setContextMenu({ ...contextMenu, visible: false }));
       }
     };
 
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, [contextMenu.visible]);
+  }, [dispatch, contextMenu]);
 
   const selectedCount = useMemo(
     () => snapshot.items.filter((item) => item.selected).length,
@@ -233,7 +285,9 @@ export function useDownloaderPage(): DownloaderPageController {
     const downloading = snapshot.items.filter(
       (item) => item.status.toLowerCase() === "downloading",
     ).length;
-    const completed = snapshot.items.filter((item) => item.status.toLowerCase() === "completed").length;
+    const completed = snapshot.items.filter(
+      (item) => item.status.toLowerCase() === "completed",
+    ).length;
     const failed = snapshot.items.filter((item) => item.status.toLowerCase() === "failed").length;
 
     const totalMb = snapshot.items.reduce((acc, item) => acc + parseSizeToMb(item.totalSize), 0);
@@ -244,7 +298,8 @@ export function useDownloaderPage(): DownloaderPageController {
     );
 
     const remainingMb = Math.max(0, totalMb - downloadedMb);
-    const active = snapshot.items.find((item) => item.status.toLowerCase() === "downloading") ?? null;
+    const active =
+      snapshot.items.find((item) => item.status.toLowerCase() === "downloading") ?? null;
     const progressPercent = totalMb > 0 ? (downloadedMb / totalMb) * 100 : 0;
 
     return {
@@ -261,85 +316,106 @@ export function useDownloaderPage(): DownloaderPageController {
   }, [snapshot.items]);
 
   async function runAction(action: () => Promise<void>) {
-    setActionError(null);
+    dispatch(downloaderActions.setActionError(null));
     try {
       await action();
     } catch (error) {
-      setActionError(String(error));
+      dispatch(downloaderActions.setActionError(String(error)));
     }
   }
 
   function openSettingsDialog() {
-    setSettingsDraft({ ...settings });
-    setActiveMenu(null);
+    dispatch(downloaderActions.setSettingsDraft({ ...settings }));
+    dispatch(downloaderActions.setActiveMenu(null));
   }
 
   function closeSettingsDialog() {
-    setSettingsDraft(null);
+    dispatch(downloaderActions.setSettingsDraft(null));
   }
 
   function applySettingsDialog() {
     if (!settingsDraft) return;
 
-    setSettings({
-      ...settingsDraft,
-      connections: Math.max(1, clampNonNegative(settingsDraft.connections, 16)),
-      splits: Math.max(1, clampNonNegative(settingsDraft.splits, 16)),
-      maxConnectionsPerServer: clampNonNegative(settingsDraft.maxConnectionsPerServer, 0),
-      maxSimultaneousDownloads: clampNonNegative(settingsDraft.maxSimultaneousDownloads, 0),
-      chunkSize: settingsDraft.chunkSize.trim() || "1M",
-      userAgent: settingsDraft.userAgent.trim() || "Mozilla/5.0",
-    });
-    setSettingsDraft(null);
+    dispatch(
+      downloaderActions.setSettings({
+        ...settingsDraft,
+        connections: Math.max(1, clampNonNegative(settingsDraft.connections, 16)),
+        splits: Math.max(1, clampNonNegative(settingsDraft.splits, 16)),
+        maxConnectionsPerServer: clampNonNegative(settingsDraft.maxConnectionsPerServer, 0),
+        maxSimultaneousDownloads: clampNonNegative(settingsDraft.maxSimultaneousDownloads, 0),
+        chunkSize: settingsDraft.chunkSize.trim() || "1M",
+        userAgent: settingsDraft.userAgent.trim() || "Mozilla/5.0",
+      }),
+    );
+    dispatch(downloaderActions.setSettingsDraft(null));
   }
 
   function updateDraft(patch: Partial<SettingsState>) {
-    setSettingsDraft((current) => {
-      if (!current) return current;
-      return { ...current, ...patch };
-    });
+    dispatch(downloaderActions.patchSettingsDraft(patch));
   }
 
   function toggleMenu(menu: MenuName) {
-    setContextMenu((prev) => ({ ...prev, visible: false }));
-    setActiveMenu((current) => (current === menu ? null : menu));
+    dispatch(downloaderActions.setContextMenu({ ...contextMenu, visible: false }));
+    dispatch(downloaderActions.setActiveMenu(activeMenu === menu ? null : menu));
   }
 
   function closeMenus() {
-    setActiveMenu(null);
+    dispatch(downloaderActions.setActiveMenu(null));
   }
 
   function updatePanelHeights() {
-    if (queuePanelRef.current) setQueuePanelHeight(Math.max(160, queuePanelRef.current.offsetHeight));
-    if (logsPanelRef.current) setLogsPanelHeight(Math.max(90, logsPanelRef.current.offsetHeight));
+    if (queuePanelRef.current) {
+      dispatch(
+        downloaderActions.setQueuePanelHeight(Math.max(160, queuePanelRef.current.offsetHeight)),
+      );
+    }
+    if (logsPanelRef.current) {
+      dispatch(
+        downloaderActions.setLogsPanelHeight(Math.max(90, logsPanelRef.current.offsetHeight)),
+      );
+    }
   }
 
   function onQueueContextMenu(event: React.MouseEvent<HTMLElement>) {
     event.preventDefault();
-    setActiveMenu(null);
-    setContextMenu({ visible: true, x: event.clientX, y: event.clientY });
+    dispatch(downloaderActions.setActiveMenu(null));
+    dispatch(
+      downloaderActions.setContextMenu({
+        visible: true,
+        x: event.clientX,
+        y: event.clientY,
+      }),
+    );
   }
 
   async function onRowContextMenu(event: React.MouseEvent<HTMLElement>, itemId: string) {
     event.preventDefault();
     await runAction(async () => {
-      const clear = await invoke<QueueSnapshot>("set_all_queue_items_selected", { selected: false });
-      setSnapshot(clear);
+      const clear = await invoke<QueueSnapshot>("set_all_queue_items_selected", {
+        selected: false,
+      });
+      dispatch(downloaderActions.setSnapshot(clear));
 
       const next = await invoke<QueueSnapshot>("set_queue_item_selected", {
         id: itemId,
         selected: true,
       });
-      setSnapshot(next);
+      dispatch(downloaderActions.setSnapshot(next));
     });
 
-    setActiveMenu(null);
-    setContextMenu({ visible: true, x: event.clientX, y: event.clientY });
+    dispatch(downloaderActions.setActiveMenu(null));
+    dispatch(
+      downloaderActions.setContextMenu({
+        visible: true,
+        x: event.clientX,
+        y: event.clientY,
+      }),
+    );
   }
 
   async function addToQueue() {
     if (!urlInput.trim()) {
-      setActionError("URL is required.");
+      dispatch(downloaderActions.setActionError("URL is required."));
       return;
     }
 
@@ -349,27 +425,27 @@ export function useDownloaderPage(): DownloaderPageController {
         destination,
         fileName: fileName.trim() || null,
       });
-      setSnapshot(next);
-      setUrlInput("");
-      setFileName("");
+      dispatch(downloaderActions.setSnapshot(next));
+      dispatch(downloaderActions.setUrlInput(""));
+      dispatch(downloaderActions.setFileName(""));
     });
   }
 
   async function importFromText(text: string) {
     if (!text.trim()) {
-      setActionError("Import text is empty.");
+      dispatch(downloaderActions.setActionError("Import text is empty."));
       return;
     }
 
     await runAction(async () => {
       const next = await invoke<QueueSnapshot>("add_queue_items_from_text", { text, destination });
-      setSnapshot(next);
+      dispatch(downloaderActions.setSnapshot(next));
     });
   }
 
   async function importFromTxtFile() {
     importInputRef.current?.click();
-    setActiveMenu(null);
+    dispatch(downloaderActions.setActiveMenu(null));
   }
 
   async function onImportFileChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -385,105 +461,105 @@ export function useDownloaderPage(): DownloaderPageController {
       const next = await invoke<QueueSnapshot>("start_queue", {
         maxSimultaneousDownloads: settings.maxSimultaneousDownloads,
       });
-      setSnapshot(next);
+      dispatch(downloaderActions.setSnapshot(next));
     });
   }
 
   async function stopQueue() {
     await runAction(async () => {
       const next = await invoke<QueueSnapshot>("stop_queue");
-      setSnapshot(next);
+      dispatch(downloaderActions.setSnapshot(next));
     });
   }
 
   async function clearLogs() {
     await runAction(async () => {
       const next = await invoke<QueueSnapshot>("clear_logs");
-      setSnapshot(next);
+      dispatch(downloaderActions.setSnapshot(next));
     });
   }
 
   async function clearQueue() {
     await runAction(async () => {
       const next = await invoke<QueueSnapshot>("clear_queue");
-      setSnapshot(next);
+      dispatch(downloaderActions.setSnapshot(next));
     });
   }
 
   async function removeItem(id: string) {
     await runAction(async () => {
       const next = await invoke<QueueSnapshot>("remove_queue_item", { id });
-      setSnapshot(next);
+      dispatch(downloaderActions.setSnapshot(next));
     });
   }
 
   async function retryItem(id: string) {
     await runAction(async () => {
       const next = await invoke<QueueSnapshot>("retry_queue_item", { id });
-      setSnapshot(next);
+      dispatch(downloaderActions.setSnapshot(next));
     });
   }
 
   async function retryFailed() {
     await runAction(async () => {
       const next = await invoke<QueueSnapshot>("retry_failed_items");
-      setSnapshot(next);
+      dispatch(downloaderActions.setSnapshot(next));
     });
   }
 
   async function removeFailed() {
     await runAction(async () => {
       const next = await invoke<QueueSnapshot>("remove_failed_items");
-      setSnapshot(next);
+      dispatch(downloaderActions.setSnapshot(next));
     });
   }
 
   async function setItemPriority(id: string, priority: QueuePriority) {
     await runAction(async () => {
       const next = await invoke<QueueSnapshot>("set_queue_item_priority", { id, priority });
-      setSnapshot(next);
+      dispatch(downloaderActions.setSnapshot(next));
     });
   }
 
   async function setSelectedPriority(priority: QueuePriority) {
     await runAction(async () => {
       const next = await invoke<QueueSnapshot>("set_selected_items_priority", { priority });
-      setSnapshot(next);
+      dispatch(downloaderActions.setSnapshot(next));
     });
   }
 
   async function sortQueue(sortBy: QueueSortBy) {
     await runAction(async () => {
       const next = await invoke<QueueSnapshot>("sort_queue", { sortBy });
-      setSnapshot(next);
+      dispatch(downloaderActions.setSnapshot(next));
     });
   }
 
   async function setItemSelected(id: string, selected: boolean) {
     await runAction(async () => {
       const next = await invoke<QueueSnapshot>("set_queue_item_selected", { id, selected });
-      setSnapshot(next);
+      dispatch(downloaderActions.setSnapshot(next));
     });
   }
 
   async function setAllSelected(selected: boolean) {
     await runAction(async () => {
       const next = await invoke<QueueSnapshot>("set_all_queue_items_selected", { selected });
-      setSnapshot(next);
+      dispatch(downloaderActions.setSnapshot(next));
     });
   }
 
   async function removeSelected() {
     await runAction(async () => {
       const next = await invoke<QueueSnapshot>("remove_selected_items");
-      setSnapshot(next);
+      dispatch(downloaderActions.setSnapshot(next));
     });
   }
 
   async function retrySelected() {
     await runAction(async () => {
       const next = await invoke<QueueSnapshot>("retry_selected_items");
-      setSnapshot(next);
+      dispatch(downloaderActions.setSnapshot(next));
     });
   }
 
@@ -492,7 +568,7 @@ export function useDownloaderPage(): DownloaderPageController {
 
     await runAction(async () => {
       const next = await invoke<QueueSnapshot>("reorder_queue_item", { draggedId, targetId });
-      setSnapshot(next);
+      dispatch(downloaderActions.setSnapshot(next));
     });
   }
 
@@ -501,7 +577,7 @@ export function useDownloaderPage(): DownloaderPageController {
       (item) => item.selected && item.status.toLowerCase() === "completed",
     );
     if (!target) {
-      setActionError("Select one completed item first.");
+      dispatch(downloaderActions.setActionError("Select one completed item first."));
       return;
     }
 
@@ -513,7 +589,7 @@ export function useDownloaderPage(): DownloaderPageController {
   async function openSelectedFolder() {
     const target = snapshot.items.find((item) => item.selected) ?? snapshot.items[0];
     if (!target) {
-      setActionError("No queue item available.");
+      dispatch(downloaderActions.setActionError("No queue item available."));
       return;
     }
 
@@ -523,9 +599,10 @@ export function useDownloaderPage(): DownloaderPageController {
   }
 
   async function previewCurrentCommand() {
-    const effectiveUrl = urlInput.trim() || progressStats.active?.url || snapshot.items[0]?.url || "";
+    const effectiveUrl =
+      urlInput.trim() || progressStats.active?.url || snapshot.items[0]?.url || "";
     if (!effectiveUrl) {
-      setActionError("URL is required for command preview.");
+      dispatch(downloaderActions.setActionError("URL is required for command preview."));
       return;
     }
 
@@ -548,21 +625,21 @@ export function useDownloaderPage(): DownloaderPageController {
       };
 
       const cmd = await invoke<string>("build_preview_command", { input });
-      setPreviewCommand(cmd);
+      dispatch(downloaderActions.setPreviewCommand(cmd));
     });
   }
 
   async function pasteFromClipboard() {
     await runAction(async () => {
       const text = await navigator.clipboard.readText();
-      setUrlInput(text?.trim() || "");
+      dispatch(downloaderActions.setUrlInput(text?.trim() || ""));
     });
   }
 
   async function browseDestinationFolder() {
     await runAction(async () => {
       const selected = await invoke<string | null>("pick_folder");
-      if (selected) setDestination(selected);
+      if (selected) dispatch(downloaderActions.setDestination(selected));
     });
   }
 
@@ -570,7 +647,7 @@ export function useDownloaderPage(): DownloaderPageController {
     await runAction(async () => {
       const selected = await invoke<string | null>("pick_file");
       if (selected && settingsDraft) {
-        updateDraft({ customAria2Path: selected });
+        dispatch(downloaderActions.patchSettingsDraft({ customAria2Path: selected }));
       }
     });
   }

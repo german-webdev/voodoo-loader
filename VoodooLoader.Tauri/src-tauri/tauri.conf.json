@@ -14,7 +14,11 @@
       {
         "title": "Voodoo Loader",
         "width": 1160,
-        "height": 760
+        "height": 760,
+        "minWidth": 980,
+        "minHeight": 680,
+        "maxWidth": 1920,
+        "maxHeight": 1440
       }
     ],
     "security": {

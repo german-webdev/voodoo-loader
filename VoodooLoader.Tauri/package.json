@@ -19,7 +19,8 @@
     "e2e:ui": "playwright test --ui",
     "storybook": "storybook dev -p 6006",
     "storybook:build": "storybook build",
-    "check": "npm run lint && npm run typecheck && npm run test",
+    "check:fsd": "node ./scripts/check-fsd-boundaries.cjs",
+    "check": "npm run lint && npm run typecheck && npm run check:fsd && npm run test",
     "check:frontend:ci": "npm run check && npm run build && npm run storybook:build && npx playwright install chromium && npm run e2e",
     "check:rust": "node ./scripts/run-rust-checks.cjs",
     "check:prepush": "npm run check:frontend:ci && npm run check:rust",
@@ -28,6 +29,7 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@reduxjs/toolkit": "^2.11.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@mui/material": "^7.0.2",
@@ -36,6 +38,7 @@
     "formik": "^2.4.6",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-redux": "^9.2.0",
     "yup": "^1.7.1"
   },
   "devDependencies": {

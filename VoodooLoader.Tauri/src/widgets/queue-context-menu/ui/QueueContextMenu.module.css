@@ -1,0 +1,51 @@
+.contextMenu,
+.submenuPopup {
+  border: var(--border-thin) solid var(--color-line);
+  border-radius: var(--radius-popup);
+  background: var(--color-popup-bg);
+  box-shadow: var(--shadow-popup);
+}
+
+.contextMenu {
+  position: fixed;
+  left: var(--context-menu-left);
+  top: var(--context-menu-top);
+  min-width: var(--size-popup-min-width);
+  z-index: var(--z-context-menu);
+  display: grid;
+  overflow: hidden;
+}
+
+.contextMenu button {
+  min-height: var(--size-menu-button-height);
+  border: var(--border-none);
+  border-radius: var(--space-zero);
+  background: transparent;
+  color: var(--color-text-primary);
+  justify-content: flex-start;
+  text-align: left;
+  padding-inline: var(--space-menu-button-inline);
+  padding-block: var(--space-zero);
+}
+
+.contextMenu button:hover {
+  background: var(--color-menu-hover);
+}
+
+.submenuItem {
+  position: relative;
+}
+
+.submenuPopup {
+  position: absolute;
+  left: calc(var(--size-full) - var(--space-submenu-offset));
+  top: calc(var(--space-submenu-offset) * var(--scale-negative-one));
+  min-width: var(--size-submenu-min-width);
+  display: none;
+  overflow: hidden;
+  z-index: var(--z-submenu);
+}
+
+.submenuItem:hover .submenuPopup {
+  display: grid;
+}

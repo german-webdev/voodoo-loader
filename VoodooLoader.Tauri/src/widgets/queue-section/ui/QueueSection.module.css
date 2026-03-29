@@ -1,0 +1,40 @@
+.queueCard {
+  border: var(--border-thin) solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-panel);
+  padding: var(--space-panel-padding);
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-section-gap);
+}
+
+.queueMeta,
+.queueToolbar {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.queueToolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-field-two-col-gap);
+  margin-bottom: var(--space-layout-gap);
+}
+
+.selectAll {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-checkbox-gap);
+}
+
+.resizable {
+  resize: vertical;
+  overflow: auto;
+  min-height: var(--size-table-min-height);
+  height: var(--queue-panel-height);
+  max-height: var(--size-grid-body-max-height);
+}

@@ -58,6 +58,9 @@
   --space-compact-select-block: var(--space-2);
   --space-progress-details-gap: var(--space-4);
   --space-section-gap: var(--space-8);
+  --space-grid-row-inline: var(--space-8);
+  --space-grid-row-block: var(--space-6);
+  --space-grid-cell-gap: var(--space-6);
 
   --radius-control: 4px;
   --radius-menu-link: 3px;
@@ -98,6 +101,21 @@
   --size-about-icon: 34px;
   --size-queue-panel-default: 230px;
   --size-logs-panel-default: 130px;
+  --size-grid-row-height: 50px;
+  --size-grid-row-head-height: 40px;
+  --size-grid-footer-height: 32px;
+  --size-grid-body-max-height: 440px;
+  --size-empty-state-height: 120px;
+
+  --size-queue-col-select: 52px;
+  --size-queue-col-file-min: 240px;
+  --size-queue-col-status: 120px;
+  --size-queue-col-progress: 84px;
+  --size-queue-col-speed: 90px;
+  --size-queue-col-eta: 68px;
+  --size-queue-col-total: 102px;
+  --size-queue-col-priority: 118px;
+  --size-queue-col-action: 168px;
 
   --layout-add-row-columns: minmax(var(--space-zero), var(--size-full)) auto auto;
   --layout-field-inline-columns: minmax(var(--space-zero), var(--size-full)) auto;
@@ -179,4 +197,26 @@ input,
 select,
 textarea {
   font: inherit;
+}
+
+@media (max-width: 1180px) {
+  :root {
+    --size-layout-max: 1120px;
+    --size-menu-link-min-width: 72px;
+    --space-menu-gap: var(--space-8);
+    --space-menu-link-inline: var(--space-8);
+    --size-queue-col-file-min: 210px;
+    --size-queue-col-action: 154px;
+  }
+}
+
+@media (max-width: 940px) {
+  :root {
+    --space-layout-padding: var(--space-8);
+    --space-layout-gap: var(--space-6);
+    --layout-add-row-columns: minmax(var(--space-zero), var(--size-full));
+    --layout-field-inline-columns: minmax(var(--space-zero), var(--size-full));
+    --size-queue-col-file-min: 180px;
+    --size-queue-col-action: 140px;
+  }
 }

@@ -1,0 +1,102 @@
+.modalBackdrop {
+  position: fixed;
+  inset: var(--space-zero);
+  z-index: var(--z-modal);
+  display: grid;
+  place-items: center;
+  background: var(--color-backdrop);
+}
+
+.modal {
+  width: min(var(--size-modal-width), calc(var(--size-vw-full) - var(--space-modal-offset)));
+  border: var(--border-thin) solid var(--color-line);
+  border-radius: var(--radius-popup);
+  background: var(--color-modal-bg);
+}
+
+.modalHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-modal-padding);
+  border-bottom: var(--border-thin) solid var(--color-line);
+}
+
+.modalClose {
+  min-width: var(--size-modal-close);
+  min-height: var(--size-modal-close);
+  padding-inline: var(--space-zero);
+}
+
+.modalBody {
+  max-height: var(--size-modal-body-max-height);
+  overflow: auto;
+  padding: var(--space-modal-padding);
+}
+
+.settingsGroup {
+  border: var(--border-thin) solid var(--color-line);
+  border-radius: var(--radius-settings-group);
+  margin-bottom: var(--space-settings-group-margin);
+}
+
+.settingsGroup legend {
+  padding-inline: var(--space-settings-legend-inline);
+  color: var(--color-text-primary);
+}
+
+.field {
+  display: grid;
+  gap: var(--space-field-gap);
+  margin: var(--space-panel-padding);
+}
+
+.field label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+
+.fieldNote {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.inlineField {
+  display: grid;
+  grid-template-columns: var(--layout-field-inline-columns);
+  gap: var(--space-layout-gap);
+}
+
+.twoCol {
+  display: grid;
+  grid-template-columns: var(--layout-field-two-col-columns);
+  gap: var(--space-field-two-col-gap);
+}
+
+.toggleRow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-layout-gap);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.controlInput {
+  width: var(--size-full);
+  min-height: var(--size-control-height);
+  border: var(--border-thin) solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-input-bg);
+  color: var(--color-text-primary);
+  padding-block: var(--space-input-block);
+  padding-inline: var(--space-input-inline);
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-field-two-col-gap);
+  padding: var(--space-modal-padding);
+  border-top: var(--border-thin) solid var(--color-line);
+}

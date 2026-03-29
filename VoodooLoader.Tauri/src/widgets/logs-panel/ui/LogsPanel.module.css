@@ -1,0 +1,32 @@
+.logsCard {
+  border: var(--border-thin) solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-panel);
+  padding: var(--space-panel-padding);
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-section-gap);
+}
+
+.logsBox {
+  min-height: var(--size-logs-min-height);
+  height: var(--logs-panel-height);
+  border: var(--border-thin) solid var(--color-line);
+  border-radius: var(--radius-control);
+  overflow: auto;
+  resize: vertical;
+  padding: var(--space-panel-padding);
+  background: var(--color-input-bg);
+  color: var(--color-logs-text);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+}
+
+.logError {
+  color: var(--color-error-text);
+  margin-bottom: var(--space-log-error-margin);
+}
