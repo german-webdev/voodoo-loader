@@ -158,15 +158,29 @@
 
 .actionIconButton {
   min-width: var(--size-control-mini-height);
+  width: var(--size-control-mini-height);
+  height: var(--size-control-mini-height);
+  flex: 0 0 var(--size-control-mini-height);
+  border: var(--border-none);
   padding-inline: var(--space-zero);
+  padding-block: var(--space-zero);
   display: inline-grid;
   place-items: center;
+  overflow: hidden;
+  line-height: var(--line-height-tight);
 }
 
 .actionIconImage {
-  width: calc(var(--size-control-mini-height) - var(--space-8));
-  height: calc(var(--size-control-mini-height) - var(--space-8));
-  object-fit: contain;
+  width: var(--size-full);
+  height: var(--size-full);
+  max-width: var(--size-full);
+  max-height: var(--size-full);
+  object-fit: cover;
+  object-position: center;
+  transform: scale(var(--scale-icon-crop-mini));
+  transform-origin: center;
+  border-radius: inherit;
+  display: block;
   pointer-events: none;
 }
 

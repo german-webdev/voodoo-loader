@@ -24,7 +24,7 @@
 
   --space-layout-padding: var(--space-10);
   --space-layout-gap: var(--space-8);
-  --space-topbar-inline: var(--space-10);
+  --space-topbar-inline: var(--space-panel-padding);
   --space-topbar-block: var(--space-4);
   --space-menu-gap: var(--space-12);
   --space-menu-link-inline: var(--space-10);
@@ -77,7 +77,10 @@
   --size-vw-full: 100vw;
   --size-viewport-height: 100vh;
   --size-layout-max: 1280px;
-  --size-topbar-height: 40px;
+  --size-topbar-height: 56px;
+  --size-topbar-logo-height: 54px;
+  --size-topbar-logo-max-width: 360px;
+  --scale-topbar-logo-crop: 1;
   --size-menu-link-min-width: 86px;
   --size-menu-link-height: 28px;
   --size-popup-min-width: 240px;
@@ -122,6 +125,8 @@
 
   --size-flex-grow: 1;
   --scale-negative-one: -1;
+  --scale-icon-crop-main: 1.3;
+  --scale-icon-crop-mini: 1.3;
 
   --z-topbar: 90;
   --z-popup: 120;
@@ -150,6 +155,7 @@
   --color-button-primary: #3f6ebf;
   --color-button-primary-border: #567ec8;
   --color-menu-hover: #2c313b;
+  --color-brand-logo-green: #63ef7d;
   --color-table-border: #3a4049;
   --color-table-header-bg: #2d323b;
   --color-table-header-text: #d9dee5;
