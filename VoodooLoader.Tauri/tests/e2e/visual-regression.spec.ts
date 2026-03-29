@@ -409,7 +409,8 @@ test.describe("visual regression", () => {
       "button-icon-stop.png",
     );
 
-    await snapshot(page.getByRole("button", { name: /Retry failed-model\.ckpt/i }), "button-icon-retry.png");
-    await snapshot(page.getByRole("button", { name: /Remove failed-model\.ckpt/i }), "button-icon-remove.png");
+    const failedRow = page.getByTestId("queue-row-item-failed-1");
+    await snapshot(failedRow.locator('button[title="Retry"]'), "button-icon-retry.png");
+    await snapshot(failedRow.locator('button[title="Remove"]'), "button-icon-remove.png");
   });
 });
