@@ -6,14 +6,21 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragOverEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
+  arrayMove,
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
+import {
+  restrictToFirstScrollableAncestor,
+  restrictToParentElement,
+  restrictToVerticalAxis,
+} from "@dnd-kit/modifiers";
 import { CSS } from "@dnd-kit/utilities";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type * as React from "react";
@@ -153,20 +160,92 @@ interface ActiveResizeState {
   maxWidth: number;
 }
 
+const COLUMN_MIN_WIDTH_BUFFER_PX = 12;
+
+function parsePixelValue(value: string): number {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function measureNodeIntrinsicWidth(node: HTMLElement): number {
+  const computedStyle = getComputedStyle(node);
+  const inlinePadding =
+    parsePixelValue(computedStyle.paddingLeft) + parsePixelValue(computedStyle.paddingRight);
+
+  const visibleChildren = Array.from(node.children).filter(
+    (child): child is HTMLElement => child instanceof HTMLElement && !child.hasAttribute("data-resize-handle"),
+  );
+
+  const gap = parsePixelValue(computedStyle.columnGap || computedStyle.gap);
+  const childrenWidth = visibleChildren.reduce((acc, child, index) => {
+    const next = acc + Math.ceil(child.scrollWidth);
+    return index > 0 ? next + gap : next;
+  }, 0);
+
+  if (childrenWidth > 0) {
+    return childrenWidth + inlinePadding;
+  }
+
+  return Math.ceil(node.scrollWidth) + inlinePadding;
+}
+
 function readRootPixelVariable(variableName: string, fallback: number): number {
   const value = getComputedStyle(document.documentElement).getPropertyValue(variableName).trim();
   const parsed = Number.parseFloat(value);
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function buildGridColumnsTemplate(columnWidths: Partial<Record<QueueColumnId, number>>): string {
+function buildGridColumnsTemplate(
+  columnWidths: Partial<Record<QueueColumnId, number>>,
+): string {
   return QUEUE_COLUMNS.map((column) => {
     const width = columnWidths[column.id];
     if (typeof width === "number") {
       return `${width}px`;
     }
+
     return column.defaultTemplate;
   }).join(" ");
+}
+
+function measureColumnContentMinWidth(rootElement: HTMLElement, columnId: QueueColumnId): number {
+  const nodes = rootElement.querySelectorAll<HTMLElement>(`[data-col="${columnId}"]`);
+  let measured = 0;
+
+  nodes.forEach((node) => {
+    measured = Math.max(measured, measureNodeIntrinsicWidth(node) + COLUMN_MIN_WIDTH_BUFFER_PX);
+  });
+
+  return measured;
+}
+
+function sanitizeCandidateFileName(value: string): string {
+  const withoutFragment = value.split("#")[0] ?? value;
+  const withoutQuery = withoutFragment.split("?")[0] ?? withoutFragment;
+  const normalized = withoutQuery.trim().replace(/\\+$/, "");
+  const baseName = normalized.includes("/")
+    ? normalized.substring(normalized.lastIndexOf("/") + 1)
+    : normalized;
+
+  if (!baseName) {
+    return "";
+  }
+
+  try {
+    return decodeURIComponent(baseName);
+  } catch {
+    return baseName;
+  }
+}
+
+function resolveDisplayFileName(item: QueueItem): string {
+  const fromItem = sanitizeCandidateFileName(item.fileName);
+  if (fromItem) {
+    return fromItem;
+  }
+
+  const fromUrl = sanitizeCandidateFileName(item.url);
+  return fromUrl || "download.bin";
 }
 
 interface SortableQueueRowProps {
@@ -190,10 +269,13 @@ function SortableQueueRow({
   onRemoveItem,
   onRowContextMenu,
 }: SortableQueueRowProps) {
-  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
-    useSortable({
-      id: item.id,
-    });
+  const { listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+    transition: {
+      duration: 220,
+      easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+    },
+  });
 
   const sortableStyle: CSSProperties = {
     ...rowStyle,
@@ -211,20 +293,13 @@ function SortableQueueRow({
       ref={setNodeRef}
       className={rowClassName}
       style={sortableStyle}
+      data-testid={`queue-row-${item.id}`}
+      {...listeners}
       onContextMenu={(event) => {
         void onRowContextMenu(event, item.id);
       }}
     >
-      <div className={styles.cell}>
-        <div
-          className={styles.dragHandle}
-          ref={setActivatorNodeRef}
-          aria-label={`Reorder ${item.fileName}`}
-          {...attributes}
-          {...listeners}
-        >
-          <span className={styles.dragDots}>::</span>
-        </div>
+      <div className={styles.cell} data-col="select">
         <Checkbox
           checked={item.selected}
           onPointerDown={(event) => event.stopPropagation()}
@@ -234,23 +309,33 @@ function SortableQueueRow({
         />
       </div>
 
-      <div className={styles.fileCell}>
-        <div className={styles.fileName}>{item.fileName}</div>
+      <div className={styles.fileCell} data-col="file">
+        <div className={styles.fileName} data-testid={`queue-file-name-${item.id}`}>
+          {resolveDisplayFileName(item)}
+        </div>
         <div className={styles.fileUrl}>{item.url}</div>
       </div>
 
-      <div className={styles.cell}>
+      <div className={styles.cell} data-col="status">
         <span className={styles.status} data-status={item.status.toLowerCase()}>
           {item.status}
         </span>
       </div>
 
-      <div className={styles.cell}>{item.progress.toFixed(0)}%</div>
-      <div className={styles.cell}>{item.speed}</div>
-      <div className={styles.cell}>{item.eta}</div>
-      <div className={styles.cell}>{item.totalSize}</div>
+      <div className={styles.cell} data-col="progress">
+        <span>{item.progress.toFixed(0)}%</span>
+      </div>
+      <div className={styles.cell} data-col="speed">
+        <span>{item.speed}</span>
+      </div>
+      <div className={styles.cell} data-col="eta">
+        <span>{item.eta}</span>
+      </div>
+      <div className={styles.cell} data-col="total">
+        <span>{item.totalSize}</span>
+      </div>
 
-      <div className={styles.cell}>
+      <div className={styles.cell} data-col="priority">
         <Select
           className={styles.prioritySelect}
           value={item.priority}
@@ -265,7 +350,7 @@ function SortableQueueRow({
         </Select>
       </div>
 
-      <div className={styles.actionsCell}>
+      <div className={styles.actionsCell} data-col="action">
         {item.status.toLowerCase() === "failed" || item.status.toLowerCase() === "canceled" ? (
           <Button
             type="button"
@@ -308,8 +393,34 @@ export function QueueGrid({
   onRowContextMenu,
 }: QueueGridProps) {
   const resizeStateRef = useRef<ActiveResizeState | null>(null);
+  const lastValidOverIdRef = useRef<string | null>(null);
+  const gridRootRef = useRef<HTMLDivElement | null>(null);
   const [columnWidths, setColumnWidths] = useState<Partial<Record<QueueColumnId, number>>>({});
   const [isResizing, setIsResizing] = useState(false);
+  const [optimisticOrderIds, setOptimisticOrderIds] = useState<string[] | null>(null);
+
+  const serverOrderIds = useMemo(() => items.map((item) => item.id), [items]);
+
+  const displayedOrderIds = useMemo(() => {
+    if (!optimisticOrderIds) {
+      return serverOrderIds;
+    }
+
+    const sameSet =
+      optimisticOrderIds.length === serverOrderIds.length &&
+      optimisticOrderIds.every((id) => serverOrderIds.includes(id));
+
+    return sameSet ? optimisticOrderIds : serverOrderIds;
+  }, [optimisticOrderIds, serverOrderIds]);
+
+  const displayedItems = useMemo(() => {
+    if (displayedOrderIds === serverOrderIds) {
+      return items;
+    }
+
+    const byId = new Map(items.map((item) => [item.id, item]));
+    return displayedOrderIds.map((id) => byId.get(id)).filter((item): item is QueueItem => !!item);
+  }, [displayedOrderIds, items, serverOrderIds]);
 
   const rowStyle = useMemo(
     () =>
@@ -328,7 +439,7 @@ export function QueueGrid({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  const sortableIds = useMemo(() => items.map((item) => item.id), [items]);
+  const sortableIds = displayedOrderIds;
 
   const onResizePointerMove = useCallback((event: PointerEvent) => {
     const resizeState = resizeStateRef.current;
@@ -366,7 +477,15 @@ export function QueueGrid({
       if (!headerCell) return;
 
       const startWidth = headerCell.getBoundingClientRect().width;
-      const minWidth = readRootPixelVariable(column.minWidthVar, column.minWidthFallback);
+      const rootElement = headerCell.closest(`.${styles.gridRoot}`);
+      const contentMinWidth =
+        column.id !== "file" && rootElement instanceof HTMLElement
+          ? measureColumnContentMinWidth(rootElement, column.id)
+          : 0;
+      const minWidth = Math.max(
+        readRootPixelVariable(column.minWidthVar, column.minWidthFallback),
+        contentMinWidth,
+      );
       const maxWidth = readRootPixelVariable(column.maxWidthVar, column.maxWidthFallback);
 
       resizeStateRef.current = {
@@ -387,58 +506,121 @@ export function QueueGrid({
 
   const onDragStart = useCallback(
     (event: DragStartEvent) => {
+      lastValidOverIdRef.current = null;
+      setOptimisticOrderIds(serverOrderIds);
       onSetDraggedItemId(String(event.active.id));
     },
-    [onSetDraggedItemId],
+    [onSetDraggedItemId, serverOrderIds],
   );
+
+  const onDragOver = useCallback((event: DragOverEvent) => {
+    const activeId = String(event.active.id);
+    const overId = event.over ? String(event.over.id) : null;
+    if (!overId || activeId === overId) {
+      return;
+    }
+
+    lastValidOverIdRef.current = overId;
+
+    setOptimisticOrderIds((prev) => {
+      const source = prev ?? serverOrderIds;
+      const oldIndex = source.indexOf(activeId);
+      const newIndex = source.indexOf(overId);
+      if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) {
+        return source;
+      }
+      return arrayMove(source, oldIndex, newIndex);
+    });
+  }, [serverOrderIds]);
 
   const onDragEnd = useCallback(
     (event: DragEndEvent) => {
       const activeId = String(event.active.id);
       const overId = event.over ? String(event.over.id) : null;
+      const commitTargetId =
+        overId && overId !== activeId
+          ? overId
+          : lastValidOverIdRef.current && lastValidOverIdRef.current !== activeId
+            ? lastValidOverIdRef.current
+            : null;
       onSetDraggedItemId(null);
 
-      if (!overId || activeId === overId) return;
-      void onReorderItemsByDrag(activeId, overId);
+      if (!commitTargetId) {
+        lastValidOverIdRef.current = null;
+        setOptimisticOrderIds(null);
+        return;
+      }
+      const oldIndex = sortableIds.indexOf(activeId);
+      const newIndex = sortableIds.indexOf(commitTargetId);
+      if (oldIndex < 0 || newIndex < 0) {
+        lastValidOverIdRef.current = null;
+        setOptimisticOrderIds(null);
+        return;
+      }
+      void onReorderItemsByDrag(activeId, commitTargetId).finally(() => {
+        lastValidOverIdRef.current = null;
+        setOptimisticOrderIds(null);
+      });
     },
-    [onReorderItemsByDrag, onSetDraggedItemId],
+    [onReorderItemsByDrag, onSetDraggedItemId, sortableIds],
   );
 
   const onDragCancel = useCallback(() => {
+    lastValidOverIdRef.current = null;
+    setOptimisticOrderIds(null);
     onSetDraggedItemId(null);
   }, [onSetDraggedItemId]);
 
   return (
     <div className={styles.gridScroller}>
-      <div className={styles.gridRoot} data-resizing={isResizing ? "true" : "false"}>
+      <div
+        ref={gridRootRef}
+        className={styles.gridRoot}
+        data-resizing={isResizing ? "true" : "false"}
+      >
         <div className={styles.gridHead} style={rowStyle}>
-          {QUEUE_COLUMNS.map((column) => (
-            <div key={column.id} className={styles.headCell}>
+          {QUEUE_COLUMNS.map((column, index) => (
+            <div
+              key={column.id}
+              className={styles.headCell}
+              data-testid={`queue-head-${column.id}`}
+              data-col={column.id}
+            >
               <span>{column.label}</span>
-              <button
-                type="button"
-                className={styles.resizeHandle}
-                aria-label={`Resize ${column.label} column`}
-                tabIndex={-1}
-                onPointerDown={(event) => onResizePointerDown(column, event)}
-              />
+              {index < QUEUE_COLUMNS.length - 1 ? (
+                <button
+                  type="button"
+                  className={styles.resizeHandle}
+                  data-resize-handle="true"
+                  data-testid={`queue-resize-${column.id}`}
+                  aria-label={`Resize ${column.label} column`}
+                  tabIndex={-1}
+                  onPointerDown={(event) => onResizePointerDown(column, event)}
+                />
+              ) : null}
             </div>
           ))}
         </div>
 
         <DndContext
           sensors={sensors}
+          modifiers={[
+            restrictToVerticalAxis,
+            restrictToFirstScrollableAncestor,
+            restrictToParentElement,
+          ]}
           collisionDetection={closestCenter}
           onDragStart={onDragStart}
+          onDragOver={onDragOver}
           onDragEnd={onDragEnd}
           onDragCancel={onDragCancel}
         >
           <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
             <div className={styles.gridBody}>
-              {items.length === 0 ? (
+              {displayedItems.length === 0 ? (
                 <div className={styles.emptyState}>Queue is empty. Add a link to start.</div>
               ) : (
-                items.map((item) => (
+                displayedItems.map((item) => (
                   <SortableQueueRow
                     key={item.id}
                     item={item}
@@ -464,4 +646,3 @@ export function QueueGrid({
     </div>
   );
 }
-

@@ -2,16 +2,16 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 
 const screenshotOptions = process.env.CI
   ? ({
-      animations: "disabled",
-      caret: "hide",
-      scale: "css",
-      maxDiffPixelRatio: 0.02,
-    } as const)
+    animations: "disabled",
+    caret: "hide",
+    scale: "css",
+    maxDiffPixelRatio: 0.02,
+  } as const)
   : ({
-      animations: "disabled",
-      caret: "hide",
-      scale: "css",
-    } as const);
+    animations: "disabled",
+    caret: "hide",
+    scale: "css",
+  } as const);
 
 function withTauriMocks() {
   const deepClone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
@@ -221,9 +221,9 @@ function withTauriMocks() {
 
   (window as unknown as { __TAURI_INTERNALS__: unknown }).__TAURI_INTERNALS__ = tauriInternals;
   (window as unknown as { __TAURI_EVENT_PLUGIN_INTERNALS__: unknown }).__TAURI_EVENT_PLUGIN_INTERNALS__ =
-    {
-      unregisterListener: () => void 0,
-    };
+  {
+    unregisterListener: () => void 0,
+  };
 
   localStorage.clear();
 }

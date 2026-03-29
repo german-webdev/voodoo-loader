@@ -17,6 +17,7 @@ module.exports = {
   moduleNameMapper: {
     "\\.module\\.(css|less|scss|sass)$": "<rootDir>/src/shared/config/jest/cssModuleProxy.cjs",
     "\\.(css|less|scss|sass)$": "<rootDir>/src/shared/config/jest/styleMock.cjs",
+    "\\.(png|jpg|jpeg|gif|svg|webp|avif)$": "<rootDir>/src/shared/config/jest/fileMock.cjs",
     "^(\\.{1,2}/.*)\\.js$": "$1",
   },
   collectCoverageFrom: ["src/**/*.{ts,tsx}", "!src/main.tsx", "!src/vite-env.d.ts"],

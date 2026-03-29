@@ -4,6 +4,7 @@ import type {
   QueuePriority,
   SettingsState,
 } from "../../../entities/queue/model/types";
+import type * as React from "react";
 import { Button } from "../../../shared/ui/button/Button";
 import { NavBar } from "../../../shared/ui/nav-bar/NavBar";
 import { NavLinkButton } from "../../../shared/ui/nav-link-button/NavLinkButton";
@@ -12,6 +13,7 @@ import headerLogo from "../../../shared/assets/branding/voodoo-loader-header-log
 import styles from "./DownloaderHeader.module.css";
 
 interface DownloaderHeaderProps {
+  menuHostRef: React.RefObject<HTMLElement | null>;
   activeMenu: MenuName | null;
   settings: SettingsState;
   onToggleMenu: (menu: MenuName) => void;
@@ -39,6 +41,7 @@ interface DownloaderHeaderProps {
 }
 
 export function DownloaderHeader({
+  menuHostRef,
   activeMenu,
   settings,
   onToggleMenu,
@@ -65,7 +68,7 @@ export function DownloaderHeader({
   onCheckUpdates,
 }: DownloaderHeaderProps) {
   return (
-    <header className={styles.topbar}>
+    <header ref={menuHostRef} className={styles.topbar}>
       <NavBar className={styles.menuBar}>
         <div className={styles.menuItem}>
           <NavLinkButton type="button" onClick={() => onToggleMenu("file")}>

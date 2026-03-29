@@ -105,7 +105,9 @@ fn priority_rank(priority: &str) -> u8 {
 }
 
 fn file_name_from_url(url: &str) -> String {
-    let trimmed = url.trim_end_matches('/');
+    let without_fragment = url.split('#').next().unwrap_or(url);
+    let without_query = without_fragment.split('?').next().unwrap_or(without_fragment);
+    let trimmed = without_query.trim().trim_end_matches('/');
     if let Some(last) = trimmed.rsplit('/').next() {
         if !last.is_empty() {
             return last.to_string();
@@ -870,17 +872,13 @@ fn reorder_queue_item(
         if let (Some(source), Some(target)) = (source_index, target_index) {
             if source != target {
                 let moved_item = runtime.items.remove(source);
-                let final_target = if source < target {
-                    target.saturating_sub(1)
-                } else {
-                    target
-                };
+                let final_target = target.min(runtime.items.len());
                 runtime.items.insert(final_target, moved_item);
             }
             push_log(
                 &mut runtime,
                 "INFO",
-                format!("Reordered item {dragged_id} before {target_id}"),
+                format!("Reordered item {dragged_id} relative to {target_id}"),
             );
         } else {
             push_log(
@@ -1263,6 +1261,15 @@ mod tests {
     }
 
     #[test]
+    fn file_name_from_url_ignores_query_and_fragment() {
+        assert_eq!(
+            file_name_from_url("https://example.com/models/model.safetensors?download=1#section"),
+            "model.safetensors"
+        );
+        assert_eq!(file_name_from_url("https://example.com/path/"), "path");
+    }
+
+    #[test]
     fn build_preview_command_masks_sensitive_token() {
         let input = PreviewCommandInput {
             url: "https://example.com/archive.zip".to_string(),
@@ -1285,5 +1292,87 @@ mod tests {
         assert!(command.contains("Authorization: Bearer"));
         assert!(!command.contains("super-secret-token"));
         assert!(command.contains("***"));
+    }
+
+    #[test]
+    fn reorder_down_places_item_at_expected_target_index() {
+        let mut items = vec![
+            QueueItem {
+                id: "q-1".to_string(),
+                selected: false,
+                file_name: "a.bin".to_string(),
+                url: "https://example.com/a.bin".to_string(),
+                destination: "C:\\Downloads".to_string(),
+                status: "Queued".to_string(),
+                progress: 0.0,
+                speed: "0 MB/s".to_string(),
+                eta: "--".to_string(),
+                total_size: "1 MB".to_string(),
+                priority: "Medium".to_string(),
+                attempts: 0,
+                created_order: 1,
+            },
+            QueueItem {
+                id: "q-2".to_string(),
+                selected: false,
+                file_name: "b.bin".to_string(),
+                url: "https://example.com/b.bin".to_string(),
+                destination: "C:\\Downloads".to_string(),
+                status: "Queued".to_string(),
+                progress: 0.0,
+                speed: "0 MB/s".to_string(),
+                eta: "--".to_string(),
+                total_size: "1 MB".to_string(),
+                priority: "Medium".to_string(),
+                attempts: 0,
+                created_order: 2,
+            },
+            QueueItem {
+                id: "q-3".to_string(),
+                selected: false,
+                file_name: "c.bin".to_string(),
+                url: "https://example.com/c.bin".to_string(),
+                destination: "C:\\Downloads".to_string(),
+                status: "Queued".to_string(),
+                progress: 0.0,
+                speed: "0 MB/s".to_string(),
+                eta: "--".to_string(),
+                total_size: "1 MB".to_string(),
+                priority: "Medium".to_string(),
+                attempts: 0,
+                created_order: 3,
+            },
+            QueueItem {
+                id: "q-4".to_string(),
+                selected: false,
+                file_name: "d.bin".to_string(),
+                url: "https://example.com/d.bin".to_string(),
+                destination: "C:\\Downloads".to_string(),
+                status: "Queued".to_string(),
+                progress: 0.0,
+                speed: "0 MB/s".to_string(),
+                eta: "--".to_string(),
+                total_size: "1 MB".to_string(),
+                priority: "Medium".to_string(),
+                attempts: 0,
+                created_order: 4,
+            },
+        ];
+
+        let source = items
+            .iter()
+            .position(|item| item.id == "q-2")
+            .expect("source index should exist");
+        let target = items
+            .iter()
+            .position(|item| item.id == "q-4")
+            .expect("target index should exist");
+
+        let moved = items.remove(source);
+        let final_target = target.min(items.len());
+        items.insert(final_target, moved);
+
+        let ordered_ids: Vec<String> = items.iter().map(|item| item.id.clone()).collect();
+        assert_eq!(ordered_ids, vec!["q-1", "q-3", "q-4", "q-2"]);
     }
 }

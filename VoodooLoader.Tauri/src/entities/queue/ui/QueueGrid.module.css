@@ -49,6 +49,7 @@
   min-height: var(--size-zero);
   overflow-y: auto;
   overflow-x: hidden;
+  overscroll-behavior: contain;
 }
 
 .gridRow {
@@ -56,7 +57,13 @@
   padding-inline: var(--space-grid-row-inline);
   padding-block: var(--space-grid-row-block);
   border-bottom: var(--border-thin) solid var(--color-table-border);
-  cursor: default;
+  cursor: grab;
+  touch-action: pan-y;
+  will-change: transform;
+}
+
+.gridRow:active {
+  cursor: grabbing;
 }
 
 .gridRowDragging {
@@ -71,29 +78,6 @@
   gap: var(--space-checkbox-gap);
   font-size: var(--font-size-xs);
   color: var(--color-text-primary);
-}
-
-.dragHandle {
-  display: inline-grid;
-  place-items: center;
-  min-width: var(--size-control-mini-height);
-  min-height: var(--size-control-mini-height);
-  border: var(--border-thin) solid var(--color-line);
-  border-radius: var(--radius-control);
-  background: var(--color-button-bg);
-  cursor: grab;
-  user-select: none;
-  touch-action: none;
-}
-
-.dragHandle:active {
-  cursor: grabbing;
-}
-
-.dragDots {
-  color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
-  line-height: var(--line-height-tight);
 }
 
 .resizeHandle {

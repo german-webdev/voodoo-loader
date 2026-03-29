@@ -18,34 +18,41 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate version policy
+        run: node ./VoodooLoader.Tauri/scripts/validate-version.cjs --branch "${GITHUB_REF_NAME}"
+
       - name: Resolve version and tag
         id: meta
         run: |
           VERSION=$(node -p "require('./VoodooLoader.Tauri/package.json').version")
-          if [ "${GITHUB_REF_NAME}" = "development" ]; then
-            TAG="v${VERSION}-beta.${GITHUB_RUN_NUMBER}"
-            PRE=true
-          else
-            TAG="v${VERSION}"
-            PRE=false
-          fi
+          TAG="v${VERSION}"
+          if echo "${VERSION}" | grep -q '-'; then PRE=true; else PRE=false; fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
           echo "prerelease=${PRE}" >> "$GITHUB_OUTPUT"
 
       - name: Create tag
+        id: create_tag
         run: |
           TAG="${{ steps.meta.outputs.tag }}"
           if git rev-parse "$TAG" >/dev/null 2>&1; then
             echo "Tag $TAG already exists. Skip."
+            echo "created=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag "$TAG"
           git push origin "$TAG"
+          echo "created=true" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub release
+        if: steps.create_tag.outputs.created == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.meta.outputs.tag }}
