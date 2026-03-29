@@ -1,0 +1,177 @@
+.gridScroller {
+  width: var(--size-full);
+  height: var(--size-full);
+  min-width: var(--size-zero);
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.gridRoot {
+  border: var(--border-thin) solid var(--color-line);
+  border-radius: var(--radius-control);
+  overflow: hidden;
+  background: var(--color-panel-secondary);
+  width: max-content;
+  min-width: var(--size-full);
+  height: var(--size-full);
+  display: grid;
+  grid-template-rows: auto minmax(var(--size-table-min-height), 1fr) auto;
+}
+
+.gridHead,
+.gridRow {
+  display: grid;
+  grid-template-columns: var(--queue-grid-columns);
+  gap: var(--space-grid-cell-gap);
+  align-items: center;
+}
+
+.gridHead {
+  background: var(--color-table-header-bg);
+  color: var(--color-table-header-text);
+  border-bottom: var(--border-thin) solid var(--color-table-border);
+  min-height: var(--size-grid-row-head-height);
+  padding-inline: var(--space-grid-row-inline);
+  padding-block: var(--space-grid-row-block);
+  font-size: var(--font-size-xs);
+}
+
+.gridBody {
+  min-height: var(--size-zero);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.gridRow {
+  min-height: var(--size-grid-row-height);
+  padding-inline: var(--space-grid-row-inline);
+  padding-block: var(--space-grid-row-block);
+  border-bottom: var(--border-thin) solid var(--color-table-border);
+  cursor: grab;
+}
+
+.gridRow:active {
+  cursor: grabbing;
+}
+
+.cell {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-checkbox-gap);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-primary);
+}
+
+.dragHandle {
+  display: inline-grid;
+  place-items: center;
+  min-width: var(--size-control-mini-height);
+  min-height: var(--size-control-mini-height);
+  border: var(--border-thin) solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-button-bg);
+  cursor: grab;
+  user-select: none;
+}
+
+.dragHandle:active {
+  cursor: grabbing;
+}
+
+.dragDots {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-tight);
+}
+
+.fileCell {
+  min-width: var(--space-zero);
+}
+
+.fileName {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fileUrl {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xxs);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status {
+  display: inline-flex;
+  border-radius: var(--radius-pill);
+  padding-block: var(--space-status-block);
+  padding-inline: var(--space-status-inline);
+  font-size: var(--font-size-xxs);
+}
+
+.status[data-status="queued"] {
+  background: var(--color-status-queued-bg);
+}
+
+.status[data-status="downloading"] {
+  background: var(--color-status-downloading-bg);
+  color: var(--color-status-downloading-text);
+}
+
+.status[data-status="completed"] {
+  background: var(--color-status-completed-bg);
+  color: var(--color-status-completed-text);
+}
+
+.status[data-status="failed"] {
+  background: var(--color-status-failed-bg);
+  color: var(--color-status-failed-text);
+}
+
+.status[data-status="canceled"] {
+  background: var(--color-status-canceled-bg);
+  color: var(--color-status-canceled-text);
+}
+
+.prioritySelect {
+  width: var(--size-full);
+  min-height: var(--size-compact-select-height);
+  border: var(--border-thin) solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-input-bg);
+  color: var(--color-text-primary);
+  padding-inline: var(--space-compact-select-inline);
+  padding-block: var(--space-compact-select-block);
+}
+
+.actionsCell {
+  display: flex;
+  justify-content: flex-start;
+  gap: var(--space-row-action-gap);
+  min-width: var(--space-zero);
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.emptyState {
+  min-height: var(--size-empty-state-height);
+  display: grid;
+  place-items: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.footerMeta {
+  min-height: var(--size-grid-footer-height);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: var(--border-thin) solid var(--color-table-border);
+  color: var(--color-text-muted);
+  padding-inline: var(--space-grid-row-inline);
+  padding-block: var(--space-grid-row-block);
+  font-size: var(--font-size-xxs);
+}

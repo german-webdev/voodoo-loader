@@ -1,0 +1,97 @@
+.topbar {
+  position: sticky;
+  top: var(--space-zero);
+  z-index: var(--z-topbar);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: var(--size-topbar-height);
+  padding-block: var(--space-topbar-block);
+  padding-inline: var(--space-topbar-inline);
+  border: var(--border-thin) solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-panel);
+}
+
+.windowTitle {
+  margin-inline: auto var(--space-zero);
+}
+
+.menuBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-menu-gap);
+}
+
+.menuItem {
+  position: relative;
+}
+
+.menuPopup,
+.submenuPopup {
+  border: var(--border-thin) solid var(--color-line);
+  border-radius: var(--radius-popup);
+  background: var(--color-popup-bg);
+  box-shadow: var(--shadow-popup);
+}
+
+.menuPopup {
+  position: absolute;
+  top: calc(var(--size-full) + var(--space-popup-offset));
+  left: var(--space-zero);
+  min-width: var(--size-popup-min-width);
+  z-index: var(--z-popup);
+  display: grid;
+  overflow: hidden;
+}
+
+.menuPopup button {
+  min-height: var(--size-menu-button-height);
+  border: var(--border-none);
+  border-radius: var(--space-zero);
+  background: transparent;
+  color: var(--color-text-primary);
+  text-align: left;
+  justify-content: flex-start;
+  padding-inline: var(--space-menu-button-inline);
+  padding-block: var(--space-zero);
+}
+
+.menuPopup button:hover {
+  background: var(--color-menu-hover);
+}
+
+.submenuItem {
+  position: relative;
+}
+
+.submenuPopup {
+  position: absolute;
+  left: calc(var(--size-full) - var(--space-submenu-offset));
+  top: calc(var(--space-submenu-offset) * var(--scale-negative-one));
+  min-width: var(--size-submenu-min-width);
+  display: none;
+  overflow: hidden;
+  z-index: var(--z-submenu);
+}
+
+.submenuItem:hover .submenuPopup {
+  display: grid;
+}
+
+@media (max-width: 940px) {
+  .topbar {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--space-layout-gap);
+  }
+
+  .windowTitle {
+    margin-inline: var(--space-zero);
+  }
+
+  .menuBar {
+    width: var(--size-full);
+    flex-wrap: wrap;
+  }
+}

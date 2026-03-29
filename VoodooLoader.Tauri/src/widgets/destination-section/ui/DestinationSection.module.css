@@ -1,0 +1,31 @@
+.panel {
+  min-width: var(--size-zero);
+  border: var(--border-thin) solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-panel);
+}
+
+.formGrid {
+  padding: var(--space-panel-padding);
+}
+
+.field {
+  display: grid;
+  gap: var(--space-field-gap);
+  margin-bottom: var(--space-field-margin-bottom);
+}
+
+.field:last-child {
+  margin-bottom: var(--space-zero);
+}
+
+.field label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+
+.fieldInline {
+  display: grid;
+  grid-template-columns: var(--layout-field-inline-columns);
+  gap: var(--space-layout-gap);
+}

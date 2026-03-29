@@ -1,0 +1,59 @@
+.modalBackdrop {
+  position: fixed;
+  inset: var(--space-zero);
+  z-index: var(--z-modal);
+  display: grid;
+  place-items: center;
+  background: var(--color-backdrop);
+}
+
+.aboutModal {
+  width: min(var(--size-about-modal-width), calc(var(--size-vw-full) - var(--space-modal-offset)));
+  border: var(--border-thin) solid var(--color-line);
+  border-radius: var(--radius-popup);
+  background: var(--color-modal-bg);
+}
+
+.aboutHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-modal-padding);
+  border-bottom: var(--border-thin) solid var(--color-line);
+}
+
+.aboutBody {
+  display: flex;
+  gap: var(--space-about-gap);
+  padding: var(--space-about-padding);
+}
+
+.aboutIcon {
+  width: var(--size-about-icon);
+  height: var(--size-about-icon);
+  border-radius: var(--radius-round);
+  display: grid;
+  place-items: center;
+  font-weight: var(--font-weight-bold);
+  background: var(--color-about-icon-bg);
+}
+
+.aboutSub {
+  margin-top: var(--space-about-sub-margin);
+  color: var(--color-text-muted);
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-field-two-col-gap);
+  padding: var(--space-modal-padding);
+  border-top: var(--border-thin) solid var(--color-line);
+}
+
+.modalClose {
+  min-width: var(--size-modal-close);
+  min-height: var(--size-modal-close);
+  padding-inline: var(--space-zero);
+}
