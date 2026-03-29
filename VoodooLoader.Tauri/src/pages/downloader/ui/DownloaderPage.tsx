@@ -61,6 +61,7 @@ export function DownloaderPage() {
     importFromTxtFile,
     onImportFileChange,
     startQueue,
+    pauseQueue,
     stopQueue,
     clearLogs,
     clearQueue,
@@ -162,6 +163,7 @@ export function DownloaderPage() {
       <QueueActionsSection
         snapshot={snapshot}
         onStartQueue={startQueue}
+        onPauseQueue={pauseQueue}
         onStopQueue={stopQueue}
         onPreviewCurrentCommand={previewCurrentCommand}
         onClearLogs={clearLogs}

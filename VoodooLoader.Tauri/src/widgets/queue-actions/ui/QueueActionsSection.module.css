@@ -12,6 +12,34 @@
   padding: var(--space-panel-padding);
 }
 
+.iconButton {
+  min-width: var(--size-control-height);
+  width: var(--size-control-height);
+  height: var(--size-control-height);
+  flex: 0 0 var(--size-control-height);
+  border: var(--border-none);
+  padding-inline: var(--space-zero);
+  padding-block: var(--space-zero);
+  display: inline-grid;
+  place-items: center;
+  overflow: hidden;
+  line-height: var(--line-height-tight);
+}
+
+.iconImage {
+  width: var(--size-full);
+  height: var(--size-full);
+  max-width: var(--size-full);
+  max-height: var(--size-full);
+  object-fit: cover;
+  object-position: center;
+  transform: scale(var(--scale-icon-crop-main));
+  transform-origin: center;
+  border-radius: inherit;
+  display: block;
+  pointer-events: none;
+}
+
 .spacer {
   flex: var(--size-flex-grow);
 }

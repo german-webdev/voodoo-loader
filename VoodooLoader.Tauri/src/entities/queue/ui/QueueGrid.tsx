@@ -3,6 +3,8 @@ import type { QueueItem, QueuePriority } from "../model/types";
 import { Button } from "../../../shared/ui/button/Button";
 import { Checkbox } from "../../../shared/ui/checkbox/Checkbox";
 import { Select } from "../../../shared/ui/select/Select";
+import retryRefreshIcon from "../../../shared/assets/button-icons/retry-refresh.png";
+import removeXIcon from "../../../shared/assets/button-icons/remove-x.png";
 import styles from "./QueueGrid.module.css";
 
 interface QueueGridProps {
@@ -158,19 +160,25 @@ export function QueueGrid({
                     <Button
                       type="button"
                       variant="mini"
+                      className={styles.actionIconButton}
+                      aria-label={`Retry ${item.fileName}`}
+                      title="Retry"
                       onPointerDown={(event) => event.stopPropagation()}
                       onClick={() => void onRetryItem(item.id)}
                     >
-                      Retry
+                      <img src={retryRefreshIcon} alt="" className={styles.actionIconImage} />
                     </Button>
                   ) : null}
                   <Button
                     type="button"
                     variant="mini"
+                    className={styles.actionIconButton}
+                    aria-label={`Remove ${item.fileName}`}
+                    title="Remove"
                     onPointerDown={(event) => event.stopPropagation()}
                     onClick={() => void onRemoveItem(item.id)}
                   >
-                    Remove
+                    <img src={removeXIcon} alt="" className={styles.actionIconImage} />
                   </Button>
                 </div>
               </div>

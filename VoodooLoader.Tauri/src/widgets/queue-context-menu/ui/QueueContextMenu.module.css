@@ -13,10 +13,13 @@
   min-width: var(--size-popup-min-width);
   z-index: var(--z-context-menu);
   display: grid;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .contextMenu button {
+  display: flex;
+  align-items: center;
+  width: var(--size-full);
   min-height: var(--size-menu-button-height);
   border: var(--border-none);
   border-radius: var(--space-zero);
@@ -34,6 +37,11 @@
 
 .submenuItem {
   position: relative;
+  width: var(--size-full);
+}
+
+.submenuItem > button {
+  width: var(--size-full);
 }
 
 .submenuPopup {
@@ -44,6 +52,25 @@
   display: none;
   overflow: hidden;
   z-index: var(--z-submenu);
+}
+
+.submenuPopup button {
+  display: flex;
+  align-items: center;
+  width: var(--size-full);
+  min-height: var(--size-menu-button-height);
+  border: var(--border-none);
+  border-radius: var(--space-zero);
+  background: transparent;
+  color: var(--color-text-primary);
+  justify-content: flex-start;
+  text-align: left;
+  padding-inline: var(--space-menu-button-inline);
+  padding-block: var(--space-zero);
+}
+
+.submenuPopup button:hover {
+  background: var(--color-menu-hover);
 }
 
 .submenuItem:hover .submenuPopup {

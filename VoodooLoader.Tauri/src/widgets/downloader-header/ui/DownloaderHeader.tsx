@@ -8,6 +8,7 @@ import { Button } from "../../../shared/ui/button/Button";
 import { NavBar } from "../../../shared/ui/nav-bar/NavBar";
 import { NavLinkButton } from "../../../shared/ui/nav-link-button/NavLinkButton";
 import { Title } from "../../../shared/ui/title/Title";
+import headerLogo from "../../../shared/assets/branding/voodoo-loader-header-logo-cropped.png";
 import styles from "./DownloaderHeader.module.css";
 
 interface DownloaderHeaderProps {
@@ -208,7 +209,7 @@ export function DownloaderHeader({
       </NavBar>
 
       <Title as="h1" typography="page" className={styles.windowTitle}>
-        Voodoo Loader
+        <img src={headerLogo} alt="Voodoo Loader" className={styles.windowLogo} draggable={false} />
       </Title>
     </header>
   );
