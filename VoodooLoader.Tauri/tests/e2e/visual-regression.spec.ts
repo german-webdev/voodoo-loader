@@ -230,6 +230,16 @@ async function snapshot(locator: Locator, name: string) {
   await expect(locator).toHaveScreenshot(name, screenshotOptions);
 }
 
+async function waitForVisualAssets(page: Page) {
+  await page.waitForFunction(() => document.fonts.status === "loaded");
+  await page.waitForFunction(
+    () =>
+      Array.from(document.images).every(
+        (img) => img.complete && (img.naturalWidth > 0 || img.currentSrc === ""),
+      ),
+  );
+}
+
 test.describe("visual regression", () => {
   test.use({
     viewport: { width: 1365, height: 930 },
@@ -239,6 +249,7 @@ test.describe("visual regression", () => {
     await page.addInitScript(withTauriMocks);
     await page.goto("/");
     await expect(page.getByRole("heading", { name: "Download queue", exact: true })).toBeVisible();
+    await waitForVisualAssets(page);
   });
 
   test("captures main screen sections", async ({ page }) => {
