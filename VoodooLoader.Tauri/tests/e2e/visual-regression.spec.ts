@@ -167,8 +167,16 @@ function withTauriMocks() {
         case "start_queue":
           state.snapshot.isRunning = true;
           return deepClone(state.snapshot);
+        case "pause_queue":
+          state.snapshot.isRunning = false;
+          return deepClone(state.snapshot);
         case "stop_queue":
           state.snapshot.isRunning = false;
+          state.snapshot.items = state.snapshot.items.map((item) =>
+            item.status === "Queued" || item.status === "Downloading"
+              ? { ...item, status: "Canceled", speed: "0 MB/s", eta: "--" }
+              : item,
+          );
           return deepClone(state.snapshot);
         case "clear_queue":
           state.snapshot.items = [];

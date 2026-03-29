@@ -7,6 +7,7 @@ import type {
 import { Button } from "../../../shared/ui/button/Button";
 import { NavBar } from "../../../shared/ui/nav-bar/NavBar";
 import { NavLinkButton } from "../../../shared/ui/nav-link-button/NavLinkButton";
+import { Title } from "../../../shared/ui/title/Title";
 import headerLogo from "../../../shared/assets/branding/voodoo-loader-header-logo-cropped.png";
 import styles from "./DownloaderHeader.module.css";
 
@@ -207,9 +208,9 @@ export function DownloaderHeader({
         </div>
       </NavBar>
 
-      <div className={styles.windowTitle}>
+      <Title as="h1" typography="page" className={styles.windowTitle}>
         <img src={headerLogo} alt="Voodoo Loader" className={styles.windowLogo} draggable={false} />
-      </div>
+      </Title>
     </header>
   );
 }

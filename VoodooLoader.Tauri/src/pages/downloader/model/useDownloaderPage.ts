@@ -72,6 +72,7 @@ export interface DownloaderPageController {
   importFromTxtFile: () => Promise<void>;
   onImportFileChange: (event: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
   startQueue: () => Promise<void>;
+  pauseQueue: () => Promise<void>;
   stopQueue: () => Promise<void>;
   clearLogs: () => Promise<void>;
   clearQueue: () => Promise<void>;
@@ -465,6 +466,13 @@ export function useDownloaderPage(): DownloaderPageController {
     });
   }
 
+  async function pauseQueue() {
+    await runAction(async () => {
+      const next = await invoke<QueueSnapshot>("pause_queue");
+      dispatch(downloaderActions.setSnapshot(next));
+    });
+  }
+
   async function stopQueue() {
     await runAction(async () => {
       const next = await invoke<QueueSnapshot>("stop_queue");
@@ -705,6 +713,7 @@ export function useDownloaderPage(): DownloaderPageController {
     importFromTxtFile,
     onImportFileChange,
     startQueue,
+    pauseQueue,
     stopQueue,
     clearLogs,
     clearQueue,

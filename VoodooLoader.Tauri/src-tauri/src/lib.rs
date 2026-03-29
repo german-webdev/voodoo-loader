@@ -996,6 +996,39 @@ fn start_queue(
 }
 
 #[tauri::command]
+fn pause_queue(
+    app: AppHandle,
+    state: State<'_, Arc<QueueStore>>,
+) -> Result<QueueSnapshot, String> {
+    let snapshot = {
+        let mut runtime = state
+            .runtime
+            .lock()
+            .map_err(|_| "queue runtime lock failed".to_string())?;
+
+        if runtime.is_running {
+            runtime.is_running = false;
+            push_log(
+                &mut runtime,
+                "INFO",
+                "Queue paused (resume with Start)".to_string(),
+            );
+        } else {
+            push_log(
+                &mut runtime,
+                "WARN",
+                "Pause ignored: queue is not running".to_string(),
+            );
+        }
+
+        snapshot_from_runtime(&runtime)
+    };
+
+    emit_snapshot(&app, &snapshot)?;
+    Ok(snapshot)
+}
+
+#[tauri::command]
 fn stop_queue(app: AppHandle, state: State<'_, Arc<QueueStore>>) -> Result<QueueSnapshot, String> {
     let snapshot = {
         let mut runtime = state
@@ -1003,7 +1036,27 @@ fn stop_queue(app: AppHandle, state: State<'_, Arc<QueueStore>>) -> Result<Queue
             .lock()
             .map_err(|_| "queue runtime lock failed".to_string())?;
         runtime.is_running = false;
-        push_log(&mut runtime, "INFO", "Queue stopped".to_string());
+
+        let mut canceled = 0usize;
+        for item in runtime.items.iter_mut() {
+            if is_active_status(&item.status) {
+                item.status = "Canceled".to_string();
+                item.speed = "0 MB/s".to_string();
+                item.eta = "--".to_string();
+                canceled += 1;
+            }
+        }
+
+        if canceled > 0 {
+            push_log(
+                &mut runtime,
+                "WARN",
+                format!("Queue stopped: canceled {canceled} active item(s)"),
+            );
+        } else {
+            push_log(&mut runtime, "INFO", "Queue stopped".to_string());
+        }
+
         snapshot_from_runtime(&runtime)
     };
 
@@ -1164,6 +1217,7 @@ pub fn run() {
             reorder_queue_item,
             sort_queue,
             start_queue,
+            pause_queue,
             stop_queue,
             clear_logs,
             clear_queue,
