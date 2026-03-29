@@ -23,15 +23,8 @@ if (fs.existsSync(releasesDir)) {
 }
 fs.mkdirSync(releasesDir, { recursive: true });
 
-console.log("[release-portable] Building frontend...");
-execSync("npm.cmd run build", { cwd: tauriRoot, stdio: "inherit" });
-
-console.log("[release-portable] Building Rust release binary...");
-const cargoBin = resolveCargo();
-execSync(`"${cargoBin}" build --release`, {
-  cwd: path.join(tauriRoot, "src-tauri"),
-  stdio: "inherit",
-});
+console.log("[release-portable] Building release app via Tauri (nsis target)...");
+execSync("npm.cmd run tauri -- build --bundles nsis", { cwd: tauriRoot, stdio: "inherit" });
 
 if (!fs.existsSync(releaseExe)) {
   throw new Error(`Release exe not found: ${releaseExe}`);
@@ -59,12 +52,6 @@ execSync(
 );
 
 console.log(`[release-portable] Done: ${outputZip}`);
-
-function resolveCargo() {
-  const explicit = path.join(process.env.USERPROFILE || "", ".cargo", "bin", "cargo.exe");
-  if (explicit && fs.existsSync(explicit)) return explicit;
-  return "cargo";
-}
 
 function toPs(filePath) {
   return filePath.replace(/\\/g, "\\\\");
