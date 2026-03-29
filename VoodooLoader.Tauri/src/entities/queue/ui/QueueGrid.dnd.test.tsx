@@ -173,4 +173,34 @@ describe("QueueGrid dnd behavior", () => {
     expect(onSetDraggedItemId).toHaveBeenCalledWith(null);
     expect(onReorderItemsByDrag).toHaveBeenCalledWith("item-3", "item-1");
   });
+
+  test("derives display file name from URL when it has trailing slash and query", () => {
+    const noopAsync = jest.fn().mockResolvedValue(undefined);
+
+    render(
+      <QueueGrid
+        items={[
+          {
+            ...queueItems[0],
+            id: "item-url-trailing-slash",
+            fileName: "",
+            url: "https://example.com/models/real-file.safetensors/?token=abc#fragment",
+          },
+        ]}
+        selectedCount={0}
+        draggedItemId={null}
+        onSetDraggedItemId={jest.fn()}
+        onReorderItemsByDrag={noopAsync}
+        onSetItemSelected={noopAsync}
+        onSetItemPriority={(id: string, priority: QueuePriority) => noopAsync(id, priority)}
+        onRetryItem={noopAsync}
+        onRemoveItem={noopAsync}
+        onRowContextMenu={noopAsync}
+      />,
+    );
+
+    expect(screen.getByTestId("queue-file-name-item-url-trailing-slash")).toHaveTextContent(
+      "real-file.safetensors",
+    );
+  });
 });

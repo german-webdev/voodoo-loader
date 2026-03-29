@@ -222,7 +222,7 @@ function measureColumnContentMinWidth(rootElement: HTMLElement, columnId: QueueC
 function sanitizeCandidateFileName(value: string): string {
   const withoutFragment = value.split("#")[0] ?? value;
   const withoutQuery = withoutFragment.split("?")[0] ?? withoutFragment;
-  const normalized = withoutQuery.trim().replace(/\\+$/, "");
+  const normalized = withoutQuery.trim().replace(/[\\/]+$/, "");
   const baseName = normalized.includes("/")
     ? normalized.substring(normalized.lastIndexOf("/") + 1)
     : normalized;
@@ -269,7 +269,7 @@ function SortableQueueRow({
   onRemoveItem,
   onRowContextMenu,
 }: SortableQueueRowProps) {
-  const { listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
     transition: {
       duration: 220,
@@ -294,6 +294,7 @@ function SortableQueueRow({
       className={rowClassName}
       style={sortableStyle}
       data-testid={`queue-row-${item.id}`}
+      {...attributes}
       {...listeners}
       onContextMenu={(event) => {
         void onRowContextMenu(event, item.id);
