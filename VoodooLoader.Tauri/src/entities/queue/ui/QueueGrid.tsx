@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { useEffect, useRef, type CSSProperties } from "react";
 import type { QueueItem, QueuePriority } from "../model/types";
 import { Button } from "../../../shared/ui/button/Button";
 import { Checkbox } from "../../../shared/ui/checkbox/Checkbox";
@@ -35,110 +35,153 @@ export function QueueGrid({
   onRemoveItem,
   onRowContextMenu,
 }: QueueGridProps) {
+  const pointerDragActiveRef = useRef(false);
+
+  useEffect(() => {
+    const stopPointerDrag = () => {
+      pointerDragActiveRef.current = false;
+      onSetDraggedItemId(null);
+    };
+
+    window.addEventListener("pointerup", stopPointerDrag);
+    window.addEventListener("pointercancel", stopPointerDrag);
+
+    return () => {
+      window.removeEventListener("pointerup", stopPointerDrag);
+      window.removeEventListener("pointercancel", stopPointerDrag);
+    };
+  }, [onSetDraggedItemId]);
+
+  const onRowPointerEnter = (itemId: string) => {
+    if (!pointerDragActiveRef.current) return;
+    if (!draggedItemId || draggedItemId === itemId) return;
+
+    void onReorderItemsByDrag(draggedItemId, itemId);
+  };
+
+  const startPointerDrag = (itemId: string, event: React.PointerEvent<HTMLElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    pointerDragActiveRef.current = true;
+    onSetDraggedItemId(itemId);
+  };
+
   return (
-    <div className={styles.gridRoot}>
-      <div className={styles.gridHead} style={rowStyle}>
-        <div>Select</div>
-        <div>File</div>
-        <div>Status</div>
-        <div>Progress</div>
-        <div>Speed</div>
-        <div>ETA</div>
-        <div>Total size</div>
-        <div>Priority</div>
-        <div>Action</div>
-      </div>
+    <div className={styles.gridScroller}>
+      <div className={styles.gridRoot}>
+        <div className={styles.gridHead} style={rowStyle}>
+          <div>Select</div>
+          <div>File</div>
+          <div>Status</div>
+          <div>Progress</div>
+          <div>Speed</div>
+          <div>ETA</div>
+          <div>Total size</div>
+          <div>Priority</div>
+          <div>Action</div>
+        </div>
 
-      <div className={styles.gridBody}>
-        {items.length === 0 ? (
-          <div className={styles.emptyState}>Queue is empty. Add a link to start.</div>
-        ) : (
-          items.map((item) => (
-            <div
-              key={item.id}
-              className={styles.gridRow}
-              style={rowStyle}
-              draggable
-              onContextMenu={(event) => {
-                void onRowContextMenu(event, item.id);
-              }}
-              onDragStart={(event) => {
-                onSetDraggedItemId(item.id);
-                event.dataTransfer.effectAllowed = "move";
-                event.dataTransfer.setData("text/plain", item.id);
-              }}
-              onDragOver={(event) => {
-                event.preventDefault();
-                event.dataTransfer.dropEffect = "move";
-              }}
-              onDrop={(event) => {
-                event.preventDefault();
-                const draggedId = event.dataTransfer.getData("text/plain") || draggedItemId;
-                if (draggedId) {
-                  void onReorderItemsByDrag(draggedId, item.id);
-                }
-                onSetDraggedItemId(null);
-              }}
-              onDragEnd={() => onSetDraggedItemId(null)}
-            >
-              <div className={styles.cell}>
-                <Checkbox
-                  checked={item.selected}
-                  onChange={(event) => {
-                    void onSetItemSelected(item.id, event.currentTarget.checked);
-                  }}
-                />
-              </div>
+        <div className={styles.gridBody}>
+          {items.length === 0 ? (
+            <div className={styles.emptyState}>Queue is empty. Add a link to start.</div>
+          ) : (
+            items.map((item) => (
+              <div
+                key={item.id}
+                className={styles.gridRow}
+                style={rowStyle}
+                onContextMenu={(event) => {
+                  void onRowContextMenu(event, item.id);
+                }}
+                onPointerEnter={() => onRowPointerEnter(item.id)}
+              >
+                <div className={styles.cell}>
+                  <div
+                    className={styles.dragHandle}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Reorder ${item.fileName}`}
+                    onPointerDown={(event) => startPointerDrag(item.id, event)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        pointerDragActiveRef.current = true;
+                        onSetDraggedItemId(item.id);
+                      }
+                    }}
+                  >
+                    <span className={styles.dragDots}>⋮⋮</span>
+                  </div>
+                  <Checkbox
+                    checked={item.selected}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onChange={(event) => {
+                      void onSetItemSelected(item.id, event.currentTarget.checked);
+                    }}
+                  />
+                </div>
 
-              <div className={styles.fileCell}>
-                <div className={styles.fileName}>{item.fileName}</div>
-                <div className={styles.fileUrl}>{item.url}</div>
-              </div>
+                <div className={styles.fileCell}>
+                  <div className={styles.fileName}>{item.fileName}</div>
+                  <div className={styles.fileUrl}>{item.url}</div>
+                </div>
 
-              <div className={styles.cell}>
-                <span className={styles.status} data-status={item.status.toLowerCase()}>
-                  {item.status}
-                </span>
-              </div>
+                <div className={styles.cell}>
+                  <span className={styles.status} data-status={item.status.toLowerCase()}>
+                    {item.status}
+                  </span>
+                </div>
 
-              <div className={styles.cell}>{item.progress.toFixed(0)}%</div>
-              <div className={styles.cell}>{item.speed}</div>
-              <div className={styles.cell}>{item.eta}</div>
-              <div className={styles.cell}>{item.totalSize}</div>
+                <div className={styles.cell}>{item.progress.toFixed(0)}%</div>
+                <div className={styles.cell}>{item.speed}</div>
+                <div className={styles.cell}>{item.eta}</div>
+                <div className={styles.cell}>{item.totalSize}</div>
 
-              <div className={styles.cell}>
-                <Select
-                  className={styles.prioritySelect}
-                  value={item.priority}
-                  onChange={(event) => {
-                    void onSetItemPriority(item.id, event.currentTarget.value as QueuePriority);
-                  }}
-                >
-                  <option>High</option>
-                  <option>Medium</option>
-                  <option>Low</option>
-                </Select>
-              </div>
+                <div className={styles.cell}>
+                  <Select
+                    className={styles.prioritySelect}
+                    value={item.priority}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onChange={(event) => {
+                      void onSetItemPriority(item.id, event.currentTarget.value as QueuePriority);
+                    }}
+                  >
+                    <option>High</option>
+                    <option>Medium</option>
+                    <option>Low</option>
+                  </Select>
+                </div>
 
-              <div className={styles.actionsCell}>
-                {item.status.toLowerCase() === "failed" ||
-                item.status.toLowerCase() === "canceled" ? (
-                  <Button type="button" variant="mini" onClick={() => void onRetryItem(item.id)}>
-                    Retry
+                <div className={styles.actionsCell}>
+                  {item.status.toLowerCase() === "failed" ||
+                  item.status.toLowerCase() === "canceled" ? (
+                    <Button
+                      type="button"
+                      variant="mini"
+                      onPointerDown={(event) => event.stopPropagation()}
+                      onClick={() => void onRetryItem(item.id)}
+                    >
+                      Retry
+                    </Button>
+                  ) : null}
+                  <Button
+                    type="button"
+                    variant="mini"
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={() => void onRemoveItem(item.id)}
+                  >
+                    Remove
                   </Button>
-                ) : null}
-                <Button type="button" variant="mini" onClick={() => void onRemoveItem(item.id)}>
-                  Remove
-                </Button>
+                </div>
               </div>
-            </div>
-          ))
-        )}
-      </div>
+            ))
+          )}
+        </div>
 
-      <div className={styles.footerMeta}>
-        <span>{items.length} items</span>
-        <span>{selectedCount} selected</span>
+        <div className={styles.footerMeta}>
+          <span>{items.length} items</span>
+          <span>{selectedCount} selected</span>
+        </div>
       </div>
     </div>
   );

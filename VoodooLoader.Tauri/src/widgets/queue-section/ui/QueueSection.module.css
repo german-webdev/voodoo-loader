@@ -33,7 +33,7 @@
 
 .resizable {
   resize: vertical;
-  overflow: auto;
+  overflow: hidden;
   min-height: var(--size-table-min-height);
   height: var(--queue-panel-height);
   max-height: var(--size-grid-body-max-height);

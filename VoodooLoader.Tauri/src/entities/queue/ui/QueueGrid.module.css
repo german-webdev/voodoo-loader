@@ -1,9 +1,16 @@
+.gridScroller {
+  height: var(--size-full);
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
 .gridRoot {
   border: var(--border-thin) solid var(--color-line);
   border-radius: var(--radius-control);
   overflow: hidden;
   background: var(--color-panel-secondary);
   height: var(--size-full);
+  min-width: var(--size-queue-grid-min-width);
   display: grid;
   grid-template-rows: auto minmax(var(--size-table-min-height), 1fr) auto;
 }
@@ -28,7 +35,8 @@
 
 .gridBody {
   min-height: var(--size-zero);
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .gridRow {
@@ -44,8 +52,33 @@
 }
 
 .cell {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-checkbox-gap);
   font-size: var(--font-size-xs);
   color: var(--color-text-primary);
+}
+
+.dragHandle {
+  display: inline-grid;
+  place-items: center;
+  min-width: var(--size-control-mini-height);
+  min-height: var(--size-control-mini-height);
+  border: var(--border-thin) solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-button-bg);
+  cursor: grab;
+  user-select: none;
+}
+
+.dragHandle:active {
+  cursor: grabbing;
+}
+
+.dragDots {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-tight);
 }
 
 .fileCell {
@@ -117,6 +150,7 @@
   gap: var(--space-row-action-gap);
   min-width: var(--space-zero);
   flex-wrap: nowrap;
+  overflow: hidden;
 }
 
 .emptyState {

@@ -24,6 +24,7 @@
     "check:frontend:ci": "npm run check && npm run build && npm run storybook:build && npx playwright install chromium && npm run e2e",
     "check:rust": "node ./scripts/run-rust-checks.cjs",
     "check:prepush": "npm run check:frontend:ci && npm run check:rust",
+    "release:portable": "node ./scripts/release-portable.cjs",
     "prepare": "cd .. && npx husky VoodooLoader.Tauri/.husky",
     "preview": "serve dist -l 4173",
     "tauri": "tauri"
