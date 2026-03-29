@@ -58,7 +58,6 @@ jobs:
   visual-regression:
     name: Visual Regression (${{ matrix.os_label }})
     runs-on: ${{ matrix.os }}
-    if: ${{ hashFiles(format('VoodooLoader.Tauri/tests/e2e/visual-regression.spec.ts-snapshots/*-chromium-{0}.png', matrix.snapshot_suffix)) != '' }}
 
     strategy:
       fail-fast: false
@@ -77,12 +76,31 @@ jobs:
     defaults:
       run:
         working-directory: VoodooLoader.Tauri
+    env:
+      SNAPSHOT_SUFFIX: ${{ matrix.snapshot_suffix }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Detect baseline for platform
+        id: baseline
+        shell: bash
+        run: |
+          set -e
+          SNAPSHOT_DIR="tests/e2e/visual-regression.spec.ts-snapshots"
+          if [ ! -d "$SNAPSHOT_DIR" ]; then
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ls "$SNAPSHOT_DIR"/*-chromium-"$SNAPSHOT_SUFFIX".png >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Setup Node
+        if: steps.baseline.outputs.exists == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -90,18 +108,24 @@ jobs:
           cache-dependency-path: VoodooLoader.Tauri/package-lock.json
 
       - name: Install dependencies
+        if: steps.baseline.outputs.exists == 'true'
         run: npm ci
 
       - name: Install Playwright browser (Linux)
-        if: runner.os == 'Linux'
+        if: steps.baseline.outputs.exists == 'true' && runner.os == 'Linux'
         run: npx playwright install --with-deps chromium
 
       - name: Install Playwright browser (non-Linux)
-        if: runner.os != 'Linux'
+        if: steps.baseline.outputs.exists == 'true' && runner.os != 'Linux'
         run: npx playwright install chromium
 
       - name: E2E visual regression
+        if: steps.baseline.outputs.exists == 'true'
         run: npm run e2e:visual
+
+      - name: No baseline for platform
+        if: steps.baseline.outputs.exists != 'true'
+        run: echo "No baseline snapshots for $SNAPSHOT_SUFFIX. Job skipped intentionally."
 
   rust-quality:
     name: Rust Quality
