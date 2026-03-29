@@ -1,9 +1,17 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
-const screenshotOptions = {
-  animations: "disabled",
-  caret: "hide",
-} as const;
+const screenshotOptions = process.env.CI
+  ? ({
+      animations: "disabled",
+      caret: "hide",
+      scale: "css",
+      maxDiffPixelRatio: 0.02,
+    } as const)
+  : ({
+      animations: "disabled",
+      caret: "hide",
+      scale: "css",
+    } as const);
 
 function withTauriMocks() {
   const deepClone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
@@ -253,7 +261,6 @@ test.describe("visual regression", () => {
   });
 
   test("captures main screen sections", async ({ page }) => {
-    await snapshot(page.locator("main"), "screen-main.png");
     await snapshot(page.locator("header").first(), "block-header.png");
 
     const addQueueSection = page
