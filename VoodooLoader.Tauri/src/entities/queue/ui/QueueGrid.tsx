@@ -110,7 +110,7 @@ export function QueueGrid({
                       }
                     }}
                   >
-                    <span className={styles.dragDots}>⋮⋮</span>
+                    <span className={styles.dragDots}>::</span>
                   </div>
                   <Checkbox
                     checked={item.selected}
@@ -186,3 +186,4 @@ export function QueueGrid({
     </div>
   );
 }
+

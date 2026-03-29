@@ -1,23 +1,17 @@
-import type { CSSProperties } from "react";
 import { AboutDialog } from "../../../widgets/about-dialog/ui/AboutDialog";
+import { AddToQueueSection } from "../../../widgets/add-to-queue/ui/AddToQueueSection";
+import { CommandPreviewSection } from "../../../widgets/command-preview/ui/CommandPreviewSection";
 import { DownloaderHeader } from "../../../widgets/downloader-header/ui/DownloaderHeader";
+import { DestinationSection } from "../../../widgets/destination-section/ui/DestinationSection";
 import { LogsPanel } from "../../../widgets/logs-panel/ui/LogsPanel";
+import { ProgressSection } from "../../../widgets/progress-section/ui/ProgressSection";
+import { QueueActionsSection } from "../../../widgets/queue-actions/ui/QueueActionsSection";
 import { QueueContextMenu } from "../../../widgets/queue-context-menu/ui/QueueContextMenu";
 import { QueueSection } from "../../../widgets/queue-section/ui/QueueSection";
 import { SettingsDialog } from "../../../widgets/settings-dialog/ui/SettingsDialog";
-import {
-  applyPreset,
-  clampNonNegative,
-  formatMb,
-  useDownloaderPage,
-} from "../model/useDownloaderPage";
-import { Button } from "../../../shared/ui/button/Button";
+import { applyPreset, clampNonNegative, useDownloaderPage } from "../model/useDownloaderPage";
 import { FileInput } from "../../../shared/ui/file-input/FileInput";
-import { Input } from "../../../shared/ui/input/Input";
-import { Title } from "../../../shared/ui/title/Title";
 import styles from "./DownloaderPage.module.css";
-
-const cx = (...classes: (string | false | null | undefined)[]) => classes.filter(Boolean).join(" ");
 
 export function DownloaderPage() {
   const page = useDownloaderPage();
@@ -91,10 +85,6 @@ export function DownloaderPage() {
     exitApp,
   } = page;
 
-  const progressStyle = {
-    "--progress-fill-width": `${Math.max(0, Math.min(100, progressStats.progressPercent)).toFixed(1)}%`,
-  } as CSSProperties;
-
   return (
     <main className={styles.appShell}>
       <FileInput
@@ -147,111 +137,37 @@ export function DownloaderPage() {
         />
       </div>
 
-      <section className={cx(styles.panel, styles.addRow)}>
-        <Input
-          type="text"
-          placeholder="Paste direct URL here"
-          className={styles.inputUrl}
-          value={urlInput}
-          onChange={(event) => setUrlInput(event.currentTarget.value)}
-        />
-        <Button type="button" variant="ghost" onClick={pasteFromClipboard}>
-          Paste
-        </Button>
-        <Button type="button" variant="primary" onClick={addToQueue}>
-          Add to queue
-        </Button>
-      </section>
+      <AddToQueueSection
+        urlInput={urlInput}
+        onUrlInputChange={setUrlInput}
+        onPasteFromClipboard={pasteFromClipboard}
+        onAddToQueue={addToQueue}
+      />
 
-      <section className={cx(styles.panel, styles.formGrid)}>
-        <div className={styles.field}>
-          <label>Destination</label>
-          <div className={styles.fieldInline}>
-            <Input
-              type="text"
-              value={destination}
-              onChange={(event) => setDestination(event.currentTarget.value)}
-            />
-            <Button type="button" variant="ghost" onClick={browseDestinationFolder}>
-              Browse
-            </Button>
-          </div>
-        </div>
+      <DestinationSection
+        destination={destination}
+        fileName={fileName}
+        onDestinationChange={setDestination}
+        onFileNameChange={setFileName}
+        onBrowseDestinationFolder={browseDestinationFolder}
+      />
 
-        <div className={styles.field}>
-          <label>Custom file name (single download only)</label>
-          <Input
-            type="text"
-            placeholder="Optional file name"
-            value={fileName}
-            onChange={(event) => setFileName(event.currentTarget.value)}
-          />
-        </div>
-      </section>
+      <ProgressSection
+        snapshot={snapshot}
+        progressStats={progressStats}
+        showProgressDetails={showProgressDetails}
+        onToggleDetails={() => setShowProgressDetails((value) => !value)}
+      />
 
-      <section className={cx(styles.panel, styles.progressCard)}>
-        <div className={styles.progressTop}>
-          <span className={styles.progressTitle}>Progress</span>
-          <Button
-            type="button"
-            variant="ghost"
-            className={styles.compactButton}
-            onClick={() => setShowProgressDetails((value) => !value)}
-          >
-            {showProgressDetails ? "Less" : "More"}
-          </Button>
-        </div>
+      <QueueActionsSection
+        snapshot={snapshot}
+        onStartQueue={startQueue}
+        onStopQueue={stopQueue}
+        onPreviewCurrentCommand={previewCurrentCommand}
+        onClearLogs={clearLogs}
+      />
 
-        <div className={styles.progressTrack}>
-          <div className={styles.progressFill} style={progressStyle} />
-        </div>
-
-        {showProgressDetails ? (
-          <div className={styles.progressDetails}>
-            <div>Status: {snapshot.isRunning ? "Running" : "Idle"}</div>
-            <div>
-              Items: queued {progressStats.queued}, downloading {progressStats.downloading},
-              completed {progressStats.completed}, failed {progressStats.failed}
-            </div>
-            <div>Total size: {formatMb(progressStats.totalMb)}</div>
-            <div>
-              Downloaded: {formatMb(progressStats.downloadedMb)} | Remaining:{" "}
-              {formatMb(progressStats.remainingMb)}
-            </div>
-            <div>
-              Speed: {progressStats.active?.speed || "0 MB/s"} | ETA:{" "}
-              {progressStats.active?.eta || "--"}
-            </div>
-          </div>
-        ) : null}
-      </section>
-
-      <section className={cx(styles.actions, styles.panel)}>
-        <Button type="button" variant="primary" onClick={startQueue}>
-          {snapshot.isRunning ? "Running..." : "Start"}
-        </Button>
-        <Button type="button" variant="ghost" onClick={stopQueue}>
-          Stop
-        </Button>
-        <Button type="button" variant="ghost" onClick={previewCurrentCommand}>
-          Preview command
-        </Button>
-        <div className={styles.spacer} />
-        <Button type="button" variant="ghost" onClick={clearLogs}>
-          Clear log
-        </Button>
-      </section>
-
-      {previewCommand ? (
-        <section className={cx(styles.panel, styles.previewCard)}>
-          <div className={styles.sectionHead}>
-            <Title as="h2" typography="section">
-              Command preview (masked)
-            </Title>
-          </div>
-          <pre className={styles.commandPreview}>{previewCommand}</pre>
-        </section>
-      ) : null}
+      <CommandPreviewSection previewCommand={previewCommand} />
 
       <QueueSection
         snapshot={snapshot}

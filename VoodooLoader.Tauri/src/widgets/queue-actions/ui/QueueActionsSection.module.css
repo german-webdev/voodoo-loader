@@ -1,0 +1,27 @@
+.panel {
+  min-width: var(--size-zero);
+  border: var(--border-thin) solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-panel);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-layout-gap);
+  padding: var(--space-panel-padding);
+}
+
+.spacer {
+  flex: var(--size-flex-grow);
+}
+
+@media (max-width: 940px) {
+  .actions {
+    flex-wrap: wrap;
+  }
+
+  .spacer {
+    display: none;
+  }
+}

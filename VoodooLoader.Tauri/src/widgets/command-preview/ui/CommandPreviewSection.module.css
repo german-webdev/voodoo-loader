@@ -1,0 +1,26 @@
+.panel {
+  min-width: var(--size-zero);
+  border: var(--border-thin) solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-panel);
+  padding: var(--space-panel-padding);
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-section-gap);
+}
+
+.commandPreview {
+  margin: var(--space-zero);
+  border: var(--border-thin) solid var(--color-line);
+  border-radius: var(--radius-control);
+  overflow-x: auto;
+  padding: var(--space-panel-padding);
+  background: var(--color-input-bg);
+  color: var(--color-command-text);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+}
