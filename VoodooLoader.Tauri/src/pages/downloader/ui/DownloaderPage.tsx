@@ -162,6 +162,7 @@ export function DownloaderPage() {
       <QueueActionsSection
         snapshot={snapshot}
         onStartQueue={startQueue}
+        onPauseQueue={stopQueue}
         onStopQueue={stopQueue}
         onPreviewCurrentCommand={previewCurrentCommand}
         onClearLogs={clearLogs}

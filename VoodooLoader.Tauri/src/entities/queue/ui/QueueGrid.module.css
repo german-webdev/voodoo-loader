@@ -156,6 +156,20 @@
   overflow: hidden;
 }
 
+.actionIconButton {
+  min-width: var(--size-control-mini-height);
+  padding-inline: var(--space-zero);
+  display: inline-grid;
+  place-items: center;
+}
+
+.actionIconImage {
+  width: calc(var(--size-control-mini-height) - var(--space-8));
+  height: calc(var(--size-control-mini-height) - var(--space-8));
+  object-fit: contain;
+  pointer-events: none;
+}
+
 .emptyState {
   min-height: var(--size-empty-state-height);
   display: grid;

@@ -12,6 +12,20 @@
   padding: var(--space-panel-padding);
 }
 
+.iconButton {
+  min-width: var(--size-control-height);
+  padding-inline: var(--space-zero);
+  display: inline-grid;
+  place-items: center;
+}
+
+.iconImage {
+  width: calc(var(--size-control-height) - var(--space-8));
+  height: calc(var(--size-control-height) - var(--space-8));
+  object-fit: contain;
+  pointer-events: none;
+}
+
 .spacer {
   flex: var(--size-flex-grow);
 }
