@@ -1,5 +1,6 @@
 .appShell {
   width: min(var(--size-layout-max), var(--size-full));
+  min-width: var(--size-zero);
   margin-inline: auto;
   margin-block: var(--space-zero);
   padding: var(--space-layout-padding);
@@ -8,6 +9,7 @@
 }
 
 .panel {
+  min-width: var(--size-zero);
   border: var(--border-thin) solid var(--color-line);
   border-radius: var(--radius-control);
   background: var(--color-panel);

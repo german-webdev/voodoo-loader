@@ -1,5 +1,7 @@
 .gridScroller {
+  width: var(--size-full);
   height: var(--size-full);
+  min-width: var(--size-zero);
   overflow-x: auto;
   overflow-y: hidden;
 }
@@ -9,8 +11,9 @@
   border-radius: var(--radius-control);
   overflow: hidden;
   background: var(--color-panel-secondary);
+  width: max-content;
+  min-width: var(--size-full);
   height: var(--size-full);
-  min-width: var(--size-queue-grid-min-width);
   display: grid;
   grid-template-rows: auto minmax(var(--size-table-min-height), 1fr) auto;
 }

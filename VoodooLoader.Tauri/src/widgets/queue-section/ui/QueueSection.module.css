@@ -1,4 +1,5 @@
 .queueCard {
+  min-width: var(--size-zero);
   border: var(--border-thin) solid var(--color-line);
   border-radius: var(--radius-control);
   background: var(--color-panel);
@@ -32,6 +33,8 @@
 }
 
 .resizable {
+  width: var(--size-full);
+  min-width: var(--size-zero);
   resize: vertical;
   overflow: hidden;
   min-height: var(--size-table-min-height);
