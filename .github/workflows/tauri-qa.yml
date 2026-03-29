@@ -53,7 +53,55 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: E2E smoke
-        run: npm run e2e
+        run: npm run e2e:smoke
+
+  visual-regression:
+    name: Visual Regression (${{ matrix.os_label }})
+    runs-on: ${{ matrix.os }}
+    if: ${{ hashFiles(format('VoodooLoader.Tauri/tests/e2e/visual-regression.spec.ts-snapshots/*-chromium-{0}.png', matrix.snapshot_suffix)) != '' }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            os_label: Windows
+            snapshot_suffix: win32
+          - os: ubuntu-latest
+            os_label: Ubuntu
+            snapshot_suffix: linux
+          - os: macos-latest
+            os_label: macOS
+            snapshot_suffix: darwin
+
+    defaults:
+      run:
+        working-directory: VoodooLoader.Tauri
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: VoodooLoader.Tauri/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser (Linux)
+        if: runner.os == 'Linux'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright browser (non-Linux)
+        if: runner.os != 'Linux'
+        run: npx playwright install chromium
+
+      - name: E2E visual regression
+        run: npm run e2e:visual
 
   rust-quality:
     name: Rust Quality
