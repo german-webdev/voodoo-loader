@@ -1,7 +1,7 @@
 {
   "name": "voodoo-loader",
   "private": true,
-  "version": "0.2.0-alpha",
+  "version": "0.2.0-alpha.1",
   "type": "module",
   "scripts": {
     "dev": "webpack serve --mode development --config webpack.config.cjs --hot",
@@ -25,7 +25,8 @@
     "storybook": "storybook dev -p 6006",
     "storybook:build": "storybook build",
     "check:fsd": "node ./scripts/check-fsd-boundaries.cjs",
-    "check": "npm run lint && npm run typecheck && npm run check:fsd && npm run test",
+    "check:version": "node ./scripts/validate-version.cjs",
+    "check": "npm run check:version && npm run lint && npm run typecheck && npm run check:fsd && npm run test",
     "check:frontend:ci": "npm run check && npm run build && npm run storybook:build && npx playwright install chromium && npm run e2e:smoke",
     "check:rust": "node ./scripts/run-rust-checks.cjs",
     "check:prepush": "npm run check:frontend:ci && npm run e2e:visual && npm run check:rust",
@@ -35,10 +36,14 @@
     "tauri": "tauri"
   },
   "dependencies": {
-    "@reduxjs/toolkit": "^2.11.0",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/modifiers": "^9.0.0",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@mui/material": "^7.0.2",
+    "@reduxjs/toolkit": "^2.11.0",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-opener": "^2",
     "formik": "^2.4.6",

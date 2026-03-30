@@ -109,6 +109,8 @@
   --size-grid-footer-height: 32px;
   --size-grid-body-max-height: 440px;
   --size-empty-state-height: 120px;
+  --size-queue-col-resizer-width: 12px;
+  --size-queue-col-resizer-hit: 4px;
   --size-queue-col-select: 52px;
   --size-queue-col-file-min: 240px;
   --size-queue-col-status: 120px;
@@ -118,6 +120,24 @@
   --size-queue-col-total: 102px;
   --size-queue-col-priority: 118px;
   --size-queue-col-action: 168px;
+  --size-queue-col-select-min: 52px;
+  --size-queue-col-select-max: 120px;
+  --size-queue-col-file-min-limit: 220px;
+  --size-queue-col-file-max: 780px;
+  --size-queue-col-status-min: 96px;
+  --size-queue-col-status-max: 260px;
+  --size-queue-col-progress-min: 84px;
+  --size-queue-col-progress-max: 200px;
+  --size-queue-col-speed-min: 90px;
+  --size-queue-col-speed-max: 220px;
+  --size-queue-col-eta-min: 68px;
+  --size-queue-col-eta-max: 180px;
+  --size-queue-col-total-min: 96px;
+  --size-queue-col-total-max: 260px;
+  --size-queue-col-priority-min: 108px;
+  --size-queue-col-priority-max: 220px;
+  --size-queue-col-action-min: 118px;
+  --size-queue-col-action-max: 300px;
 
   --layout-add-row-columns: minmax(var(--space-zero), var(--size-full)) auto auto;
   --layout-field-inline-columns: minmax(var(--space-zero), var(--size-full)) auto;
@@ -171,12 +191,15 @@
   --color-logs-text: #bcc4d0;
   --color-error-text: #ff879c;
   --color-command-text: #dbe2ed;
+  --color-column-resizer: #5d6470;
+  --color-column-resizer-active: #8ca7dc;
   --color-about-icon-bg: #1587d1;
   --color-backdrop: #0b0c0eb2;
 
   --gradient-body: radial-gradient(circle at 20% 0%, #1a2436 0%, #0d1118 45%, #090c12 100%);
   --gradient-progress: linear-gradient(90deg, #5a91ff, #5fd1ff);
   --shadow-popup: 0 8px 26px #00000059;
+  --shadow-grid-row-drag: 0 6px 18px #00000070;
 }
 
 *,
@@ -211,6 +234,7 @@ textarea {
     --space-menu-gap: var(--space-8);
     --space-menu-link-inline: var(--space-8);
     --size-queue-col-file-min: 210px;
+    --size-queue-col-file-min-limit: 210px;
     --size-queue-col-action: 154px;
   }
 }
@@ -222,6 +246,7 @@ textarea {
     --layout-add-row-columns: minmax(var(--space-zero), var(--size-full));
     --layout-field-inline-columns: minmax(var(--space-zero), var(--size-full));
     --size-queue-col-file-min: 180px;
+    --size-queue-col-file-min-limit: 180px;
     --size-queue-col-action: 140px;
   }
 }

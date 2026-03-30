@@ -97,46 +97,45 @@ export function DownloaderPage() {
         }}
       />
 
-      <div ref={menuHostRef}>
-        <DownloaderHeader
-          activeMenu={activeMenu}
-          settings={settings}
-          onToggleMenu={toggleMenu}
-          onCloseMenus={closeMenus}
-          onImportFromTxtFile={importFromTxtFile}
-          onExit={exitApp}
-          onStartQueue={startQueue}
-          onStopQueue={stopQueue}
-          onPreviewCurrentCommand={previewCurrentCommand}
-          onRetrySelected={retrySelected}
-          onRetryFailed={retryFailed}
-          onRemoveSelected={removeSelected}
-          onRemoveFailed={removeFailed}
-          onClearQueue={clearQueue}
-          onOpenSelectedFile={openSelectedFile}
-          onOpenSelectedFolder={openSelectedFolder}
-          onSetSelectedPriority={setSelectedPriority}
-          onToggleShowLogs={() => {
-            setShowLogs((value) => !value);
-            closeMenus();
-          }}
-          showLogs={showLogs}
-          onSortQueue={sortQueue}
-          onOpenSettingsDialog={openSettingsDialog}
-          onSetLanguage={(language) => {
-            setSettings((prev) => ({ ...prev, language }));
-            closeMenus();
-          }}
-          onOpenAboutDialog={() => {
-            setShowAboutDialog(true);
-            closeMenus();
-          }}
-          onCheckUpdates={() => {
-            setActionError("Check updates: GitHub Releases flow is next step.");
-            closeMenus();
-          }}
-        />
-      </div>
+      <DownloaderHeader
+        menuHostRef={menuHostRef}
+        activeMenu={activeMenu}
+        settings={settings}
+        onToggleMenu={toggleMenu}
+        onCloseMenus={closeMenus}
+        onImportFromTxtFile={importFromTxtFile}
+        onExit={exitApp}
+        onStartQueue={startQueue}
+        onStopQueue={stopQueue}
+        onPreviewCurrentCommand={previewCurrentCommand}
+        onRetrySelected={retrySelected}
+        onRetryFailed={retryFailed}
+        onRemoveSelected={removeSelected}
+        onRemoveFailed={removeFailed}
+        onClearQueue={clearQueue}
+        onOpenSelectedFile={openSelectedFile}
+        onOpenSelectedFolder={openSelectedFolder}
+        onSetSelectedPriority={setSelectedPriority}
+        onToggleShowLogs={() => {
+          setShowLogs((value) => !value);
+          closeMenus();
+        }}
+        showLogs={showLogs}
+        onSortQueue={sortQueue}
+        onOpenSettingsDialog={openSettingsDialog}
+        onSetLanguage={(language) => {
+          setSettings((prev) => ({ ...prev, language }));
+          closeMenus();
+        }}
+        onOpenAboutDialog={() => {
+          setShowAboutDialog(true);
+          closeMenus();
+        }}
+        onCheckUpdates={() => {
+          setActionError("Check updates: GitHub Releases flow is next step.");
+          closeMenus();
+        }}
+      />
 
       <AddToQueueSection
         urlInput={urlInput}

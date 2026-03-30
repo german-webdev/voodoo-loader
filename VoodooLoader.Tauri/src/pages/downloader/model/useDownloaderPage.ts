@@ -46,7 +46,7 @@ export interface DownloaderPageController {
   progressStats: ProgressStats;
   dialogSettings: SettingsState | null;
   importInputRef: React.RefObject<HTMLInputElement | null>;
-  menuHostRef: React.RefObject<HTMLDivElement | null>;
+  menuHostRef: React.RefObject<HTMLElement | null>;
   queuePanelRef: React.RefObject<HTMLDivElement | null>;
   logsPanelRef: React.RefObject<HTMLDivElement | null>;
   setUrlInput: (value: string) => void;
@@ -128,7 +128,7 @@ export function useDownloaderPage(): DownloaderPageController {
   } = state;
 
   const importInputRef = useRef<HTMLInputElement | null>(null);
-  const menuHostRef = useRef<HTMLDivElement | null>(null);
+  const menuHostRef = useRef<HTMLElement | null>(null);
   const queuePanelRef = useRef<HTMLDivElement | null>(null);
   const logsPanelRef = useRef<HTMLDivElement | null>(null);
 

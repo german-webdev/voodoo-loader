@@ -11,6 +11,7 @@
   border-radius: var(--radius-control);
   overflow: hidden;
   background: var(--color-panel-secondary);
+  position: relative;
   width: max-content;
   min-width: var(--size-full);
   height: var(--size-full);
@@ -36,10 +37,19 @@
   font-size: var(--font-size-xs);
 }
 
+.headCell {
+  position: relative;
+  min-width: var(--size-zero);
+  display: flex;
+  align-items: center;
+  min-height: var(--size-full);
+}
+
 .gridBody {
   min-height: var(--size-zero);
   overflow-y: auto;
   overflow-x: hidden;
+  overscroll-behavior: contain;
 }
 
 .gridRow {
@@ -48,10 +58,18 @@
   padding-block: var(--space-grid-row-block);
   border-bottom: var(--border-thin) solid var(--color-table-border);
   cursor: grab;
+  touch-action: pan-y;
+  will-change: transform;
 }
 
 .gridRow:active {
   cursor: grabbing;
+}
+
+.gridRowDragging {
+  opacity: 0.92;
+  box-shadow: var(--shadow-grid-row-drag);
+  background: var(--color-panel);
 }
 
 .cell {
@@ -62,26 +80,46 @@
   color: var(--color-text-primary);
 }
 
-.dragHandle {
-  display: inline-grid;
-  place-items: center;
-  min-width: var(--size-control-mini-height);
-  min-height: var(--size-control-mini-height);
-  border: var(--border-thin) solid var(--color-line);
-  border-radius: var(--radius-control);
-  background: var(--color-button-bg);
-  cursor: grab;
+.resizeHandle {
+  position: absolute;
+  top: var(--space-zero);
+  right: calc(var(--size-queue-col-resizer-width) * var(--scale-negative-one) / 2);
+  width: var(--size-queue-col-resizer-width);
+  height: var(--size-full);
+  border: var(--border-none);
+  background: transparent;
+  cursor: col-resize;
+  padding: var(--space-zero);
+  z-index: var(--z-popup);
+  touch-action: none;
+}
+
+.resizeHandle::before {
+  content: "";
+  position: absolute;
+  inset-block: var(--size-queue-col-resizer-hit);
+  left: calc(var(--size-full) / 2);
+  width: var(--border-thin);
+  transform: translateX(calc(var(--border-thin) * var(--scale-negative-one)));
+  background: var(--color-column-resizer);
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.headCell:hover .resizeHandle::before,
+.resizeHandle:focus-visible::before {
+  opacity: 1;
+}
+
+.gridRoot[data-resizing="true"] .resizeHandle::before {
+  opacity: 1;
+  background: var(--color-column-resizer-active);
+}
+
+.gridRoot[data-resizing="true"],
+.gridRoot[data-resizing="true"] * {
   user-select: none;
-}
-
-.dragHandle:active {
-  cursor: grabbing;
-}
-
-.dragDots {
-  color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
-  line-height: var(--line-height-tight);
+  cursor: col-resize;
 }
 
 .fileCell {
