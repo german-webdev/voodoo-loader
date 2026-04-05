@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes } from "react";
+import { cx } from "../../lib/classNames";
 import styles from "./Button.module.css";
 
 type ButtonVariant = "primary" | "ghost" | "mini";
@@ -14,8 +15,6 @@ const variantClassMap: Record<ButtonVariant, string> = {
 };
 
 export function Button({ variant = "ghost", className = "", ...props }: ButtonProps) {
-  const resolvedClassName = [styles.button || "button", variantClassMap[variant], className]
-    .filter(Boolean)
-    .join(" ");
+  const resolvedClassName = cx(styles.button || "button", variantClassMap[variant], className);
   return <button {...props} className={resolvedClassName} />;
 }
