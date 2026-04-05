@@ -1,5 +1,6 @@
 import { Button } from "../../../shared/ui/button/Button";
 import type { QueueSnapshot } from "../../../entities/queue/model/types";
+import { bem, cx } from "../../../shared/lib/classNames";
 import startPlayIcon from "../../../shared/assets/button-icons/start-play.png";
 import stopSquareIcon from "../../../shared/assets/button-icons/stop-square.png";
 import pauseBarsIcon from "../../../shared/assets/button-icons/pause-bars.png";
@@ -22,12 +23,17 @@ export function QueueActionsSection({
   onPreviewCurrentCommand,
   onClearLogs,
 }: QueueActionsSectionProps) {
+  const panelClassName = cx(styles.panel, styles.actions);
+  const startButtonClassName = bem(styles, "iconButton", { start: true });
+  const pauseButtonClassName = bem(styles, "iconButton", { pause: true });
+  const stopButtonClassName = bem(styles, "iconButton", { stop: true });
+
   return (
-    <section className={`${styles.panel} ${styles.actions}`}>
+    <section className={panelClassName}>
       <Button
         type="button"
         variant="primary"
-        className={styles.iconButton}
+        className={startButtonClassName}
         aria-label="Start queue"
         title="Start"
         onClick={onStartQueue}
@@ -38,7 +44,7 @@ export function QueueActionsSection({
       <Button
         type="button"
         variant="ghost"
-        className={styles.iconButton}
+        className={pauseButtonClassName}
         aria-label="Pause queue"
         title="Pause"
         onClick={onPauseQueue}
@@ -49,7 +55,7 @@ export function QueueActionsSection({
       <Button
         type="button"
         variant="ghost"
-        className={styles.iconButton}
+        className={stopButtonClassName}
         aria-label="Stop queue"
         title="Stop"
         onClick={onStopQueue}

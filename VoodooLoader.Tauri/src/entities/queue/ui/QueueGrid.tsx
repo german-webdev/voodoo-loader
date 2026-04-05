@@ -28,6 +28,7 @@ import type { QueueItem, QueuePriority } from "../model/types";
 import { Button } from "../../../shared/ui/button/Button";
 import { Checkbox } from "../../../shared/ui/checkbox/Checkbox";
 import { Select } from "../../../shared/ui/select/Select";
+import { bem } from "../../../shared/lib/classNames";
 import retryRefreshIcon from "../../../shared/assets/button-icons/retry-refresh.png";
 import removeXIcon from "../../../shared/assets/button-icons/remove-x.png";
 import styles from "./QueueGrid.module.css";
@@ -287,6 +288,8 @@ function SortableQueueRow({
     isDragging || activeDraggedItemId === item.id
       ? `${styles.gridRow} ${styles.gridRowDragging}`
       : styles.gridRow;
+  const retryButtonClassName = bem(styles, "actionIconButton", { retry: true });
+  const removeButtonClassName = bem(styles, "actionIconButton", { remove: true });
 
   return (
     <div
@@ -356,7 +359,7 @@ function SortableQueueRow({
           <Button
             type="button"
             variant="mini"
-            className={styles.actionIconButton}
+            className={retryButtonClassName}
             aria-label={`Retry ${item.fileName}`}
             title="Retry"
             onPointerDown={(event) => event.stopPropagation()}
@@ -368,7 +371,7 @@ function SortableQueueRow({
         <Button
           type="button"
           variant="mini"
-          className={styles.actionIconButton}
+          className={removeButtonClassName}
           aria-label={`Remove ${item.fileName}`}
           title="Remove"
           onPointerDown={(event) => event.stopPropagation()}
