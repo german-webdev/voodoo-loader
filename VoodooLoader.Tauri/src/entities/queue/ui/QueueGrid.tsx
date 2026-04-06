@@ -56,7 +56,6 @@ interface QueueColumnDefinition {
 
 interface QueueGridProps {
   items: QueueItem[];
-  selectedCount: number;
   draggedItemId: string | null;
   onSetDraggedItemId: (id: string | null) => void;
   onReorderItemsByDrag: (draggedId: string, targetId: string) => Promise<void>;
@@ -76,16 +75,16 @@ const QUEUE_COLUMNS: QueueColumnDefinition[] = [
     defaultTemplate: "var(--size-queue-col-select)",
     minWidthVar: "--size-queue-col-select-min",
     maxWidthVar: "--size-queue-col-select-max",
-    minWidthFallback: 52,
-    maxWidthFallback: 120,
+    minWidthFallback: 44,
+    maxWidthFallback: 96,
   },
   {
     id: "file",
     label: "File",
-    defaultTemplate: "minmax(var(--size-queue-col-file-min), 1fr)",
+    defaultTemplate: "var(--size-queue-col-file)",
     minWidthVar: "--size-queue-col-file-min-limit",
     maxWidthVar: "--size-queue-col-file-max",
-    minWidthFallback: 220,
+    minWidthFallback: 160,
     maxWidthFallback: 780,
   },
   {
@@ -94,8 +93,8 @@ const QUEUE_COLUMNS: QueueColumnDefinition[] = [
     defaultTemplate: "var(--size-queue-col-status)",
     minWidthVar: "--size-queue-col-status-min",
     maxWidthVar: "--size-queue-col-status-max",
-    minWidthFallback: 96,
-    maxWidthFallback: 260,
+    minWidthFallback: 84,
+    maxWidthFallback: 220,
   },
   {
     id: "progress",
@@ -103,8 +102,8 @@ const QUEUE_COLUMNS: QueueColumnDefinition[] = [
     defaultTemplate: "var(--size-queue-col-progress)",
     minWidthVar: "--size-queue-col-progress-min",
     maxWidthVar: "--size-queue-col-progress-max",
-    minWidthFallback: 84,
-    maxWidthFallback: 200,
+    minWidthFallback: 70,
+    maxWidthFallback: 170,
   },
   {
     id: "speed",
@@ -112,8 +111,8 @@ const QUEUE_COLUMNS: QueueColumnDefinition[] = [
     defaultTemplate: "var(--size-queue-col-speed)",
     minWidthVar: "--size-queue-col-speed-min",
     maxWidthVar: "--size-queue-col-speed-max",
-    minWidthFallback: 90,
-    maxWidthFallback: 220,
+    minWidthFallback: 72,
+    maxWidthFallback: 180,
   },
   {
     id: "eta",
@@ -121,8 +120,8 @@ const QUEUE_COLUMNS: QueueColumnDefinition[] = [
     defaultTemplate: "var(--size-queue-col-eta)",
     minWidthVar: "--size-queue-col-eta-min",
     maxWidthVar: "--size-queue-col-eta-max",
-    minWidthFallback: 68,
-    maxWidthFallback: 180,
+    minWidthFallback: 56,
+    maxWidthFallback: 140,
   },
   {
     id: "total",
@@ -130,8 +129,8 @@ const QUEUE_COLUMNS: QueueColumnDefinition[] = [
     defaultTemplate: "var(--size-queue-col-total)",
     minWidthVar: "--size-queue-col-total-min",
     maxWidthVar: "--size-queue-col-total-max",
-    minWidthFallback: 96,
-    maxWidthFallback: 260,
+    minWidthFallback: 80,
+    maxWidthFallback: 200,
   },
   {
     id: "priority",
@@ -139,8 +138,8 @@ const QUEUE_COLUMNS: QueueColumnDefinition[] = [
     defaultTemplate: "var(--size-queue-col-priority)",
     minWidthVar: "--size-queue-col-priority-min",
     maxWidthVar: "--size-queue-col-priority-max",
-    minWidthFallback: 108,
-    maxWidthFallback: 220,
+    minWidthFallback: 96,
+    maxWidthFallback: 190,
   },
   {
     id: "action",
@@ -148,8 +147,8 @@ const QUEUE_COLUMNS: QueueColumnDefinition[] = [
     defaultTemplate: "var(--size-queue-col-action)",
     minWidthVar: "--size-queue-col-action-min",
     maxWidthVar: "--size-queue-col-action-max",
-    minWidthFallback: 118,
-    maxWidthFallback: 300,
+    minWidthFallback: 104,
+    maxWidthFallback: 220,
   },
 ];
 
@@ -386,7 +385,6 @@ function SortableQueueRow({
 
 export function QueueGrid({
   items,
-  selectedCount,
   draggedItemId,
   onSetDraggedItemId,
   onReorderItemsByDrag,
@@ -576,75 +574,72 @@ export function QueueGrid({
   }, [onSetDraggedItemId]);
 
   return (
-    <div className={styles.gridScroller}>
-      <div
-        ref={gridRootRef}
-        className={styles.gridRoot}
-        data-resizing={isResizing ? "true" : "false"}
-      >
-        <div className={styles.gridHead} style={rowStyle}>
-          {QUEUE_COLUMNS.map((column, index) => (
-            <div
-              key={column.id}
-              className={styles.headCell}
-              data-testid={`queue-head-${column.id}`}
-              data-col={column.id}
-            >
-              <span>{column.label}</span>
-              {index < QUEUE_COLUMNS.length - 1 ? (
-                <button
-                  type="button"
-                  className={styles.resizeHandle}
-                  data-resize-handle="true"
-                  data-testid={`queue-resize-${column.id}`}
-                  aria-label={`Resize ${column.label} column`}
-                  tabIndex={-1}
-                  onPointerDown={(event) => onResizePointerDown(column, event)}
-                />
-              ) : null}
-            </div>
-          ))}
-        </div>
-
-        <DndContext
-          sensors={sensors}
-          modifiers={[
-            restrictToVerticalAxis,
-            restrictToFirstScrollableAncestor,
-            restrictToParentElement,
-          ]}
-          collisionDetection={closestCenter}
-          onDragStart={onDragStart}
-          onDragOver={onDragOver}
-          onDragEnd={onDragEnd}
-          onDragCancel={onDragCancel}
+    <div className={styles.gridFrame}>
+      <div className={styles.gridScroller}>
+        <div
+          ref={gridRootRef}
+          className={styles.gridRoot}
+          data-resizing={isResizing ? "true" : "false"}
         >
-          <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
-            <div className={styles.gridBody}>
-              {displayedItems.length === 0 ? (
-                <div className={styles.emptyState}>Queue is empty. Add a link to start.</div>
-              ) : (
-                displayedItems.map((item) => (
-                  <SortableQueueRow
-                    key={item.id}
-                    item={item}
-                    activeDraggedItemId={draggedItemId}
-                    rowStyle={rowStyle}
-                    onSetItemSelected={onSetItemSelected}
-                    onSetItemPriority={onSetItemPriority}
-                    onRetryItem={onRetryItem}
-                    onRemoveItem={onRemoveItem}
-                    onRowContextMenu={onRowContextMenu}
+          <div className={styles.gridHead} style={rowStyle}>
+            {QUEUE_COLUMNS.map((column, index) => (
+              <div
+                key={column.id}
+                className={styles.headCell}
+                data-testid={`queue-head-${column.id}`}
+                data-col={column.id}
+              >
+                <span>{column.label}</span>
+                {index < QUEUE_COLUMNS.length - 1 ? (
+                  <button
+                    type="button"
+                    className={styles.resizeHandle}
+                    data-resize-handle="true"
+                    data-testid={`queue-resize-${column.id}`}
+                    aria-label={`Resize ${column.label} column`}
+                    tabIndex={-1}
+                    onPointerDown={(event) => onResizePointerDown(column, event)}
                   />
-                ))
-              )}
-            </div>
-          </SortableContext>
-        </DndContext>
+                ) : null}
+              </div>
+            ))}
+          </div>
 
-        <div className={styles.footerMeta}>
-          <span>{items.length} items</span>
-          <span>{selectedCount} selected</span>
+          <DndContext
+            sensors={sensors}
+            modifiers={[
+              restrictToVerticalAxis,
+              restrictToFirstScrollableAncestor,
+              restrictToParentElement,
+            ]}
+            collisionDetection={closestCenter}
+            onDragStart={onDragStart}
+            onDragOver={onDragOver}
+            onDragEnd={onDragEnd}
+            onDragCancel={onDragCancel}
+          >
+            <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+              <div className={styles.gridBody}>
+                {displayedItems.length === 0 ? (
+                  <div className={styles.emptyState}>Queue is empty. Add a link to start.</div>
+                ) : (
+                  displayedItems.map((item) => (
+                    <SortableQueueRow
+                      key={item.id}
+                      item={item}
+                      activeDraggedItemId={draggedItemId}
+                      rowStyle={rowStyle}
+                      onSetItemSelected={onSetItemSelected}
+                      onSetItemPriority={onSetItemPriority}
+                      onRetryItem={onRetryItem}
+                      onRemoveItem={onRemoveItem}
+                      onRowContextMenu={onRowContextMenu}
+                    />
+                  ))
+                )}
+              </div>
+            </SortableContext>
+          </DndContext>
         </div>
       </div>
     </div>

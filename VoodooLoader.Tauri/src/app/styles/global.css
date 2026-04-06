@@ -18,6 +18,7 @@
   --space-8: 8px;
   --space-10: 10px;
   --space-12: 12px;
+  --space-13: 13px;
   --space-14: 14px;
   --space-22: 22px;
   --space-24: 24px;
@@ -60,7 +61,7 @@
   --space-section-gap: var(--space-8);
   --space-grid-row-inline: var(--space-8);
   --space-grid-row-block: var(--space-6);
-  --space-grid-cell-gap: var(--space-6);
+  --space-grid-cell-gap: var(--space-4);
 
   --radius-control: 4px;
   --radius-menu-link: 3px;
@@ -76,7 +77,7 @@
   --size-zero: 0px;
   --size-vw-full: 100vw;
   --size-viewport-height: 100vh;
-  --size-layout-max: 1280px;
+  --size-layout-max: 960px;
   --size-topbar-height: 56px;
   --size-topbar-logo-height: 54px;
   --size-topbar-logo-max-width: 360px;
@@ -91,7 +92,7 @@
   --size-control-mini-height: 30px;
   --size-progress-height: 16px;
   --size-table-min-height: 160px;
-  --size-table-min-width: 980px;
+  --size-table-min-width: 860px;
   --size-file-url-max-width: 360px;
   --size-compact-select-height: 28px;
   --size-compact-select-width: 90px;
@@ -102,42 +103,44 @@
   --size-modal-body-max-height: 70vh;
   --size-modal-close: 30px;
   --size-about-icon: 34px;
-  --size-queue-panel-default: 230px;
+  --size-queue-panel-default: 220px;
   --size-logs-panel-default: 130px;
   --size-grid-row-height: 50px;
-  --size-grid-row-head-height: 40px;
+  --size-grid-row-head-height: 45px;
   --size-grid-footer-height: 32px;
   --size-grid-body-max-height: 440px;
-  --size-empty-state-height: 120px;
+  --size-empty-state-height: 96px;
   --size-queue-col-resizer-width: 12px;
   --size-queue-col-resizer-hit: 4px;
-  --size-queue-col-select: 52px;
-  --size-queue-col-file-min: 240px;
-  --size-queue-col-status: 120px;
-  --size-queue-col-progress: 84px;
-  --size-queue-col-speed: 90px;
-  --size-queue-col-eta: 68px;
-  --size-queue-col-total: 102px;
-  --size-queue-col-priority: 118px;
-  --size-queue-col-action: 168px;
-  --size-queue-col-select-min: 52px;
-  --size-queue-col-select-max: 120px;
-  --size-queue-col-file-min-limit: 220px;
+  --size-queue-col-select: 44px;
+  --size-queue-col-file: 260px;
+  --size-queue-col-file-min: 180px;
+  --size-queue-col-status: 96px;
+  --size-queue-col-progress: 72px;
+  --size-queue-col-speed: 78px;
+  --size-queue-col-eta: 60px;
+  --size-queue-col-total: 88px;
+  --size-queue-col-priority: 104px;
+  --size-queue-col-action: 124px;
+  --size-queue-col-select-min: 44px;
+  --size-queue-col-select-max: 96px;
+  --size-queue-col-file-min-limit: 160px;
   --size-queue-col-file-max: 780px;
-  --size-queue-col-status-min: 96px;
-  --size-queue-col-status-max: 260px;
-  --size-queue-col-progress-min: 84px;
-  --size-queue-col-progress-max: 200px;
-  --size-queue-col-speed-min: 90px;
-  --size-queue-col-speed-max: 220px;
-  --size-queue-col-eta-min: 68px;
-  --size-queue-col-eta-max: 180px;
-  --size-queue-col-total-min: 96px;
-  --size-queue-col-total-max: 260px;
-  --size-queue-col-priority-min: 108px;
-  --size-queue-col-priority-max: 220px;
-  --size-queue-col-action-min: 118px;
-  --size-queue-col-action-max: 300px;
+  --size-queue-col-status-min: 84px;
+  --size-queue-col-status-max: 220px;
+  --size-queue-col-progress-min: 70px;
+  --size-queue-col-progress-max: 170px;
+  --size-queue-col-speed-min: 72px;
+  --size-queue-col-speed-max: 180px;
+  --size-queue-col-eta-min: 56px;
+  --size-queue-col-eta-max: 140px;
+  --size-queue-col-total-min: 80px;
+  --size-queue-col-total-max: 200px;
+  --size-queue-col-priority-min: 96px;
+  --size-queue-col-priority-max: 190px;
+  --size-queue-col-action-min: 104px;
+  --size-queue-col-action-max: 220px;
+  --size-scrollbar: 12px;
 
   --layout-add-row-columns: minmax(var(--space-zero), var(--size-full)) auto auto;
   --layout-field-inline-columns: minmax(var(--space-zero), var(--size-full)) auto;
@@ -222,9 +225,20 @@
   --color-column-resizer-active: #90f0b0;
   --color-about-icon-bg: #109050;
   --color-backdrop: #0b0c0eb2;
+  --color-scrollbar-track: #0f1d17;
+  --color-scrollbar-thumb: #2f7e5a;
+  --color-scrollbar-thumb-hover: #3ca872;
+  --color-scrollbar-thumb-active: #6fd698;
+  --color-scrollbar-thumb-border: #123425;
+  --color-scrollbar-corner: #11211a;
 
   --gradient-body: radial-gradient(circle at 20% 0%, #1a3a2c 0%, #0f1c16 45%, #0b120f 100%);
   --gradient-progress: linear-gradient(90deg, #109050, #20d080);
+  --gradient-scrollbar-thumb: linear-gradient(
+    180deg,
+    var(--color-scrollbar-thumb-hover),
+    var(--color-scrollbar-thumb)
+  );
   --shadow-popup: 0 8px 26px #00000059;
   --shadow-grid-row-drag: 0 6px 18px #00000070;
 }
@@ -233,6 +247,46 @@
 *::before,
 *::after {
   box-sizing: border-box;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-scrollbar-thumb) var(--color-scrollbar-track);
+}
+
+*::-webkit-scrollbar {
+  width: var(--size-scrollbar);
+  height: var(--size-scrollbar);
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--color-scrollbar-track);
+  border-radius: var(--radius-popup);
+}
+
+*::-webkit-scrollbar-thumb {
+  border: var(--border-thin) solid var(--color-scrollbar-thumb-border);
+  border-radius: var(--radius-popup);
+  background: var(--gradient-scrollbar-thumb);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--color-scrollbar-thumb-hover);
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background: var(--color-scrollbar-thumb-active);
+}
+
+*::-webkit-scrollbar-button {
+  width: var(--size-zero);
+  height: var(--size-zero);
+  display: none;
+}
+
+*::-webkit-scrollbar-corner {
+  background: var(--color-scrollbar-corner);
 }
 
 body {
@@ -256,13 +310,14 @@ textarea {
 
 @media (max-width: 1180px) {
   :root {
-    --size-layout-max: 1120px;
+    --size-layout-max: 940px;
     --size-menu-link-min-width: 72px;
     --space-menu-gap: var(--space-8);
     --space-menu-link-inline: var(--space-8);
-    --size-queue-col-file-min: 210px;
-    --size-queue-col-file-min-limit: 210px;
-    --size-queue-col-action: 154px;
+    --size-queue-col-file: 220px;
+    --size-queue-col-file-min: 170px;
+    --size-queue-col-file-min-limit: 170px;
+    --size-queue-col-action: 116px;
   }
 }
 
@@ -272,8 +327,9 @@ textarea {
     --space-layout-gap: var(--space-6);
     --layout-add-row-columns: minmax(var(--space-zero), var(--size-full));
     --layout-field-inline-columns: minmax(var(--space-zero), var(--size-full));
-    --size-queue-col-file-min: 180px;
-    --size-queue-col-file-min-limit: 180px;
-    --size-queue-col-action: 140px;
+    --size-queue-col-file: 190px;
+    --size-queue-col-file-min: 150px;
+    --size-queue-col-file-min-limit: 150px;
+    --size-queue-col-action: 108px;
   }
 }

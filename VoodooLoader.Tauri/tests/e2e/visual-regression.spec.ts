@@ -234,7 +234,52 @@ async function blockByHeading(page: Page, headingText: string): Promise<Locator>
   return heading.locator("xpath=ancestor::section[1]");
 }
 
-async function snapshot(locator: Locator, name: string) {
+interface LayoutStabilityResult {
+  stable: boolean;
+  size: string;
+  stableFrames: number;
+  attempts: number;
+}
+
+async function waitForStableLayout(locator: Locator): Promise<LayoutStabilityResult> {
+  return locator.evaluate(async (element) => {
+    const readSize = () => {
+      const box = element.getBoundingClientRect();
+      return `${Math.round(box.width)}x${Math.round(box.height)}`;
+    };
+
+    let previous = readSize();
+    let stableFrames = 0;
+    let attempts = 0;
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      attempts = attempt + 1;
+      await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+      const current = readSize();
+      if (current === previous) {
+        stableFrames += 1;
+        if (stableFrames >= 4) {
+          return { stable: true, size: current, stableFrames, attempts };
+        }
+      } else {
+        stableFrames = 0;
+        previous = current;
+      }
+    }
+
+    return { stable: false, size: previous, stableFrames, attempts };
+  });
+}
+
+async function snapshot(locator: Locator, name: string, options?: { settle?: boolean }) {
+  if (options?.settle) {
+    await expect(locator).toBeVisible();
+    const stability = await waitForStableLayout(locator);
+    expect(
+      stability.stable,
+      `Layout did not stabilize for ${name}; size=${stability.size}, stableFrames=${stability.stableFrames}, attempts=${stability.attempts}`,
+    ).toBeTruthy();
+    await locator.page().waitForTimeout(120);
+  }
   await expect(locator).toHaveScreenshot(name, screenshotOptions);
 }
 
@@ -268,7 +313,7 @@ test.describe("visual regression", () => {
       .locator("xpath=ancestor::section[1]");
     await snapshot(addQueueSection, "block-add-to-queue.png");
 
-    await snapshot(await blockByHeading(page, "Download queue"), "block-download-queue.png");
+    await snapshot(await blockByHeading(page, "Download queue"), "block-download-queue.png", { settle: true });
     await snapshot(await blockByHeading(page, "Logs"), "block-logs.png");
 
     const progressSection = page
@@ -287,6 +332,14 @@ test.describe("visual regression", () => {
       .getByRole("button", { name: "Start queue", exact: true })
       .locator("xpath=ancestor::section[1]");
     await snapshot(queueActionsSection, "block-queue-actions.png");
+  });
+
+  test("captures empty download queue block", async ({ page }) => {
+    await page.getByRole("button", { name: "Downloads", exact: true }).click();
+    await page.getByRole("button", { name: "Clear queue", exact: true }).click();
+    await expect(page.getByText("Queue is empty. Add a link to start.")).toBeVisible();
+
+    await snapshot(await blockByHeading(page, "Download queue"), "block-download-queue-empty.png", { settle: true });
   });
 
   test("captures menu popups, context menu and dialogs", async ({ page }) => {

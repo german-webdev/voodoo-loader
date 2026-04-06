@@ -3,6 +3,7 @@ import { QueueGrid } from "../../../entities/queue/ui/QueueGrid";
 import { Checkbox } from "../../../shared/ui/checkbox/Checkbox";
 import { Title } from "../../../shared/ui/title/Title";
 import styles from "./QueueSection.module.css";
+import { useCallback, useEffect, useRef } from "react";
 
 interface QueueSectionProps {
   snapshot: QueueSnapshot;
@@ -39,37 +40,105 @@ export function QueueSection({
   onQueueContextMenu,
   onRowContextMenu,
 }: QueueSectionProps) {
+  const resizeStateRef = useRef<{
+    startY: number;
+    startHeight: number;
+    minHeight: number;
+    maxHeight: number;
+  } | null>(null);
+  const resizeListenersAbortRef = useRef<AbortController | null>(null);
+
+  const readRootCssPixels = useCallback((variable: string, fallback: number): number => {
+    const raw = getComputedStyle(document.documentElement).getPropertyValue(variable).trim();
+    const parsed = Number.parseFloat(raw);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }, []);
+
+  const onPanelResizeMove = useCallback((event: PointerEvent) => {
+    const state = resizeStateRef.current;
+    const panel = queuePanelRef.current;
+    if (!state || !panel) {
+      return;
+    }
+
+    const nextHeight = Math.round(
+      Math.max(state.minHeight, Math.min(state.startHeight + (event.clientY - state.startY), state.maxHeight)),
+    );
+    panel.style.setProperty("--queue-panel-height", `${nextHeight}px`);
+  }, [queuePanelRef]);
+
+  const detachResizeListeners = useCallback(() => {
+    resizeListenersAbortRef.current?.abort();
+    resizeListenersAbortRef.current = null;
+  }, []);
+
+  const finishPanelResize = useCallback(
+    (commitHeight: boolean) => {
+      const wasResizing = resizeStateRef.current !== null;
+      resizeStateRef.current = null;
+      detachResizeListeners();
+      if (commitHeight && wasResizing) {
+        onUpdatePanelHeights();
+      }
+    },
+    [detachResizeListeners, onUpdatePanelHeights],
+  );
+
+  const onPanelResizeCommit = useCallback(() => {
+    finishPanelResize(true);
+  }, [finishPanelResize]);
+
+  const onPanelResizeStart = useCallback(
+    (event: React.PointerEvent<HTMLButtonElement>) => {
+      const panel = queuePanelRef.current;
+      if (!panel) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const minHeight = readRootCssPixels("--size-table-min-height", 160);
+      const maxHeight = readRootCssPixels("--size-grid-body-max-height", 440);
+
+      resizeStateRef.current = {
+        startY: event.clientY,
+        startHeight: panel.offsetHeight,
+        minHeight,
+        maxHeight,
+      };
+
+      detachResizeListeners();
+      const listenersController = new AbortController();
+      resizeListenersAbortRef.current = listenersController;
+      window.addEventListener("pointermove", onPanelResizeMove, { signal: listenersController.signal });
+      window.addEventListener("pointerup", onPanelResizeCommit, { signal: listenersController.signal });
+      window.addEventListener("pointercancel", onPanelResizeCommit, { signal: listenersController.signal });
+    },
+    [detachResizeListeners, onPanelResizeCommit, onPanelResizeMove, queuePanelRef, readRootCssPixels],
+  );
+
+  useEffect(() => {
+    return () => {
+      finishPanelResize(false);
+    };
+  }, [finishPanelResize]);
+
   return (
     <section className={styles.queueCard} onContextMenu={onQueueContextMenu}>
       <div className={styles.sectionHead}>
         <Title as="h2" typography="section">
           Download queue
         </Title>
-        <div className={styles.queueMeta}>{snapshot.items.length} items</div>
-      </div>
-
-      <div className={styles.queueToolbar}>
-        <label className={styles.selectAll}>
-          <Checkbox
-            checked={snapshot.items.length > 0 && selectedCount === snapshot.items.length}
-            onChange={(event) => {
-              void onSetAllSelected(event.currentTarget.checked);
-            }}
-          />
-          Select all
-        </label>
-        <span>{selectedCount} selected</span>
       </div>
 
       <div
         className={styles.resizable}
         ref={queuePanelRef}
         style={{ "--queue-panel-height": `${queuePanelHeight}px` } as React.CSSProperties}
-        onMouseUp={onUpdatePanelHeights}
       >
         <QueueGrid
           items={snapshot.items}
-          selectedCount={selectedCount}
           draggedItemId={draggedItemId}
           onSetDraggedItemId={onSetDraggedItemId}
           onReorderItemsByDrag={onReorderItemsByDrag}
@@ -80,6 +149,33 @@ export function QueueSection({
           onRowContextMenu={onRowContextMenu}
         />
       </div>
+
+      <div className={styles.queueFooter}>
+        <label className={styles.selectAll}>
+          <Checkbox
+            checked={snapshot.items.length > 0 && selectedCount === snapshot.items.length}
+            onChange={(event) => {
+              void onSetAllSelected(event.currentTarget.checked);
+            }}
+          />
+          Select all
+        </label>
+        <span className={styles.queueMeta}>{selectedCount} selected</span>
+        <span className={styles.queueMeta}>{snapshot.items.length} items</span>
+      </div>
+
+      <button
+        type="button"
+        className={styles.resizeEdgeHandle}
+        aria-label="Resize queue panel"
+        onPointerDown={onPanelResizeStart}
+      />
+      <button
+        type="button"
+        className={styles.resizeCornerHandle}
+        aria-label="Resize queue panel corner"
+        onPointerDown={onPanelResizeStart}
+      />
     </section>
   );
 }
