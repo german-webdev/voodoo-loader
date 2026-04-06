@@ -124,16 +124,16 @@ jobs:
           fi
           cp "$appimage_path" "$portable_dir/VoodooLoader.AppImage"
           chmod +x "$portable_dir/VoodooLoader.AppImage"
-          cat > "$portable_dir/README_PORTABLE.txt" <<EOF
-Voodoo Loader portable build
-Version: ${{ steps.meta.outputs.version }}
-Commit: ${{ steps.meta.outputs.short_sha }}
-Platform: linux-x64
-
-Run:
-chmod +x VoodooLoader.AppImage
-./VoodooLoader.AppImage
-EOF
+          printf "%s\n" \
+            "Voodoo Loader portable build" \
+            "Version: ${{ steps.meta.outputs.version }}" \
+            "Commit: ${{ steps.meta.outputs.short_sha }}" \
+            "Platform: linux-x64" \
+            "" \
+            "Run:" \
+            "chmod +x VoodooLoader.AppImage" \
+            "./VoodooLoader.AppImage" \
+            > "$portable_dir/README_PORTABLE.txt"
           tar -C "$output_root" -czf "$output_root/$artifact_base.tar.gz" "$artifact_base"
 
       - name: Upload portable artifact
