@@ -1,4 +1,5 @@
 .queueCard {
+  position: relative;
   min-width: var(--size-zero);
   border: var(--border-thin) solid var(--color-line);
   border-radius: var(--radius-control);
@@ -9,35 +10,82 @@
 .sectionHead {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--space-section-gap);
+  justify-content: flex-start;
+  margin-bottom: var(--space-8);
 }
 
-.queueMeta,
-.queueToolbar {
+.queueMeta {
+  display: flex;
+  align-items: center;
   font-size: var(--font-size-xs);
+  line-height: var(--line-height-tight);
   color: var(--color-text-muted);
 }
 
-.queueToolbar {
+.queueFooter {
   display: flex;
   align-items: center;
-  gap: var(--space-field-two-col-gap);
-  margin-bottom: var(--space-layout-gap);
+  justify-content: flex-start;
+  gap: var(--space-layout-gap);
+  flex-wrap: wrap;
+  margin-top: var(--space-layout-gap);
+  padding-inline-start: var(--space-13);
+  min-height: var(--size-control-mini-height);
 }
 
 .selectAll {
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-checkbox-gap);
+  min-height: var(--size-control-mini-height);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-tight);
+}
+
+.selectAll input[type="checkbox"] {
+  margin: var(--space-zero);
+  inline-size: var(--font-size-sm);
+  block-size: var(--font-size-sm);
+  flex: 0 0 var(--font-size-sm);
 }
 
 .resizable {
+  position: relative;
   width: var(--size-full);
   min-width: var(--size-zero);
-  resize: vertical;
+  resize: none;
   overflow: hidden;
   min-height: var(--size-table-min-height);
   height: var(--queue-panel-height);
   max-height: var(--size-grid-body-max-height);
+}
+
+.resizeEdgeHandle {
+  position: absolute;
+  left: var(--space-zero);
+  right: var(--space-zero);
+  bottom: var(--space-zero);
+  height: var(--space-8);
+  border: var(--border-none);
+  background: transparent;
+  cursor: ns-resize;
+  padding: var(--space-zero);
+}
+
+.resizeCornerHandle {
+  position: absolute;
+  right: var(--space-zero);
+  bottom: var(--space-zero);
+  width: var(--space-12);
+  height: var(--space-12);
+  border: var(--border-none);
+  background: transparent;
+  cursor: nwse-resize;
+  padding: var(--space-zero);
+}
+
+.resizeEdgeHandle:focus-visible,
+.resizeCornerHandle:focus-visible {
+  outline: var(--border-none);
 }

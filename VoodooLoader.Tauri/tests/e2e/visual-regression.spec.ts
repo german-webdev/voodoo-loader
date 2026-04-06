@@ -289,6 +289,14 @@ test.describe("visual regression", () => {
     await snapshot(queueActionsSection, "block-queue-actions.png");
   });
 
+  test("captures empty download queue block", async ({ page }) => {
+    await page.getByRole("button", { name: "Downloads", exact: true }).click();
+    await page.getByRole("button", { name: "Clear queue", exact: true }).click();
+    await expect(page.getByText("Queue is empty. Add a link to start.")).toBeVisible();
+
+    await snapshot(await blockByHeading(page, "Download queue"), "block-download-queue-empty.png");
+  });
+
   test("captures menu popups, context menu and dialogs", async ({ page }) => {
     await page.getByRole("button", { name: "File", exact: true }).click();
     await snapshot(

@@ -130,7 +130,6 @@ describe("QueueGrid dnd behavior", () => {
     render(
       <QueueGrid
         items={queueItems}
-        selectedCount={0}
         draggedItemId={null}
         onSetDraggedItemId={onSetDraggedItemId}
         onReorderItemsByDrag={onReorderItemsByDrag}
@@ -156,7 +155,6 @@ describe("QueueGrid dnd behavior", () => {
     render(
       <QueueGrid
         items={queueItems}
-        selectedCount={0}
         draggedItemId={null}
         onSetDraggedItemId={onSetDraggedItemId}
         onReorderItemsByDrag={onReorderItemsByDrag}
@@ -187,7 +185,6 @@ describe("QueueGrid dnd behavior", () => {
             url: "https://example.com/models/real-file.safetensors/?token=abc#fragment",
           },
         ]}
-        selectedCount={0}
         draggedItemId={null}
         onSetDraggedItemId={jest.fn()}
         onReorderItemsByDrag={noopAsync}
