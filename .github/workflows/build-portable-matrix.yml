@@ -145,10 +145,54 @@ jobs:
           if-no-files-found: error
 
       - name: Publish asset to GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release upload "${{ steps.meta.outputs.tag }}" \
-            "releases/${{ steps.meta.outputs.artifact_base }}.${{ matrix.portable_ext }}" \
-            --clobber \
-            --repo "${{ github.repository }}"
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('node:fs');
+            const path = require('node:path');
+
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const tag = '${{ steps.meta.outputs.tag }}';
+            const fileName = '${{ steps.meta.outputs.artifact_base }}.${{ matrix.portable_ext }}';
+            const filePath = path.join(
+              process.env.GITHUB_WORKSPACE,
+              'VoodooLoader.Tauri',
+              'releases',
+              fileName
+            );
+
+            let release;
+            for (let attempt = 1; attempt <= 20; attempt += 1) {
+              try {
+                const { data } = await github.rest.repos.getReleaseByTag({
+                  owner,
+                  repo,
+                  tag
+                });
+                release = data;
+                break;
+              } catch (error) {
+                if (error.status !== 404 || attempt === 20) {
+                  throw error;
+                }
+                await new Promise((resolve) => setTimeout(resolve, 15000));
+              }
+            }
+
+            const existingAsset = release.assets.find((asset) => asset.name === fileName);
+            if (existingAsset) {
+              await github.rest.repos.deleteReleaseAsset({
+                owner,
+                repo,
+                asset_id: existingAsset.id
+              });
+            }
+
+            await github.rest.repos.uploadReleaseAsset({
+              owner,
+              repo,
+              release_id: release.id,
+              name: fileName,
+              data: fs.readFileSync(filePath)
+            });
