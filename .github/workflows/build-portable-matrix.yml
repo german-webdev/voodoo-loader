@@ -24,7 +24,7 @@ jobs:
             tauri_bundle: nsis
             portable_ext: zip
           - os: ubuntu-22.04
-            label: linux-x64
+            label: ubuntu-x64
             rust_target: x86_64-unknown-linux-gnu
             tauri_bundle: appimage
             portable_ext: tar.gz
@@ -77,7 +77,7 @@ jobs:
         run: |
           VERSION=$(node -p "require('./package.json').version")
           SHORT_SHA=$(git rev-parse --short HEAD)
-          ARTIFACT_BASE="VoodooLoader-${VERSION}-${SHORT_SHA}-${{ matrix.label }}-portable"
+          ARTIFACT_BASE="VoodooLoader-${VERSION}-${{ matrix.label }}-portable"
           TAG="v${VERSION}"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
@@ -128,7 +128,7 @@ jobs:
             "Voodoo Loader portable build" \
             "Version: ${{ steps.meta.outputs.version }}" \
             "Commit: ${{ steps.meta.outputs.short_sha }}" \
-            "Platform: linux-x64" \
+            "Platform: ubuntu-x64" \
             "" \
             "Run:" \
             "chmod +x VoodooLoader.AppImage" \
@@ -157,7 +157,6 @@ jobs:
             const fileName = '${{ steps.meta.outputs.artifact_base }}.${{ matrix.portable_ext }}';
             const filePath = path.join(
               process.env.GITHUB_WORKSPACE,
-              'VoodooLoader.Tauri',
               'releases',
               fileName
             );
