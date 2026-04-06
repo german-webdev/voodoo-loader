@@ -1,0 +1,140 @@
+name: Build Portable Matrix
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-portable:
+    name: Portable (${{ matrix.label }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            label: windows-x64
+            rust_target: x86_64-pc-windows-msvc
+            tauri_bundle: nsis
+            portable_ext: zip
+          - os: ubuntu-22.04
+            label: linux-x64
+            rust_target: x86_64-unknown-linux-gnu
+            tauri_bundle: appimage
+            portable_ext: tar.gz
+
+    defaults:
+      run:
+        working-directory: VoodooLoader.Tauri
+
+    env:
+      CI: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: VoodooLoader.Tauri/package-lock.json
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_target }}
+
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            xdg-utils \
+            libxdo-dev
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Tauri bundle
+        run: npm run tauri -- build --target ${{ matrix.rust_target }} --bundles ${{ matrix.tauri_bundle }}
+
+      - name: Resolve build metadata
+        id: meta
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          ARTIFACT_BASE="VoodooLoader-${VERSION}-${SHORT_SHA}-${{ matrix.label }}-portable"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "artifact_base=${ARTIFACT_BASE}" >> "$GITHUB_OUTPUT"
+
+      - name: Package Windows portable
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $artifactBase = "${{ steps.meta.outputs.artifact_base }}"
+          $outputRoot = Join-Path $env:GITHUB_WORKSPACE "releases"
+          $portableDir = Join-Path $outputRoot $artifactBase
+          $zipPath = Join-Path $outputRoot "$artifactBase.zip"
+          $exePath = Join-Path $PWD "src-tauri\\target\\${{ matrix.rust_target }}\\release\\voodooloadertauri.exe"
+          if (!(Test-Path $exePath)) {
+            throw "Windows executable not found at $exePath"
+          }
+          New-Item -ItemType Directory -Force -Path $portableDir | Out-Null
+          Copy-Item $exePath (Join-Path $portableDir "VoodooLoader.exe") -Force
+          @(
+            "Voodoo Loader portable build",
+            "Version: ${{ steps.meta.outputs.version }}",
+            "Commit: ${{ steps.meta.outputs.short_sha }}",
+            "Platform: windows-x64",
+            "",
+            "Run: VoodooLoader.exe"
+          ) | Set-Content -Path (Join-Path $portableDir "README_PORTABLE.txt") -Encoding UTF8
+          Compress-Archive -Path "$portableDir\\*" -DestinationPath $zipPath -Force
+
+      - name: Package Linux portable
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          artifact_base="${{ steps.meta.outputs.artifact_base }}"
+          output_root="$GITHUB_WORKSPACE/releases"
+          portable_dir="$output_root/$artifact_base"
+          mkdir -p "$portable_dir"
+          appimage_path=$(find "$PWD/src-tauri/target/${{ matrix.rust_target }}/release/bundle/appimage" -maxdepth 1 -type f -name "*.AppImage" | head -n 1)
+          if [ -z "$appimage_path" ]; then
+            echo "No AppImage was produced."
+            exit 1
+          fi
+          cp "$appimage_path" "$portable_dir/VoodooLoader.AppImage"
+          chmod +x "$portable_dir/VoodooLoader.AppImage"
+          cat > "$portable_dir/README_PORTABLE.txt" <<EOF
+Voodoo Loader portable build
+Version: ${{ steps.meta.outputs.version }}
+Commit: ${{ steps.meta.outputs.short_sha }}
+Platform: linux-x64
+
+Run:
+chmod +x VoodooLoader.AppImage
+./VoodooLoader.AppImage
+EOF
+          tar -C "$output_root" -czf "$output_root/$artifact_base.tar.gz" "$artifact_base"
+
+      - name: Upload portable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.meta.outputs.artifact_base }}
+          path: |
+            releases/${{ steps.meta.outputs.artifact_base }}.${{ matrix.portable_ext }}
+          if-no-files-found: error

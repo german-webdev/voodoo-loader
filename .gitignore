@@ -1,0 +1,14 @@
+# Local tooling and temp
+.tmp/
+.vscode/
+releases/
+pytest-cache-files-*/
+
+# Assistant/context docs (must stay local)
+CODEX.md
+CODEX_IMPLEMENTATION_GUIDE.md
+CONTRIBUTING.md
+PRD.md
+SESSION_CONTEXT.md
+UPGRADE_LIST.md
+

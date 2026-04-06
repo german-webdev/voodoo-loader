@@ -1,48 +1,43 @@
 # Changelog
 
-All notable changes to Voodoo Loader are documented in this file.
+All notable changes to this project are documented in this file.
 
-The format follows Keep a Changelog principles and Semantic Versioning.
+The format is based on Keep a Changelog and the project follows Semantic Versioning.
 
-## [Unreleased]
+## [0.2.0] - 2026-04-06
+
 ### Added
-- QA gate scripts for local validation: `scripts/qa_gate.ps1` and `scripts/qa_gate.sh`.
-- Git hook installers and pre-push hook gate (`scripts/install_git_hooks.ps1`, `scripts/install_git_hooks.sh`, `.githooks/pre-push`).
-- CI workflow `.github/workflows/qa-gate.yml` for pull requests and pushes to `master`/`dev/**`.
+
+- Production-ready Tauri v2 desktop application baseline.
+- Queue grid improvements: drag-and-drop reorder, resize behavior, and improved alignment.
+- Visual regression coverage for queue empty state.
+- CI workflows for frontend quality, visual regression, rust checks, and release tagging.
 
 ### Changed
-- Development workflow now enforces QA-before-push and QA-before-merge via local hooks and GitHub checks.
-- Portable artifact naming now includes version, OS, architecture, and package type.
-- In-app updater asset selection now prefers runtime OS/architecture specific release files.
 
-### Known Issues
-- Windows x86 build is deferred with current PySide6/Qt6 stack.
-
-## [0.1.0-alpha] - 2026-03-28
-### Added
-- Queue-based downloader architecture on top of aria2.
-- RU/EN localization with in-app language switch.
-- Authentication modes: none, token+headers, login/password.
-- Queue context menu actions, priority controls, retry/remove operations.
-- Progress panel with accordion (more/less details).
-- Sound notifications for start/success/failure.
-- Portable build pipeline with PyInstaller.
-- Help menu with modal About dialog.
-- In-app GitHub Releases update flow with modal check/download/confirm UX.
-- Update service with semantic version comparison and optional SHA256 verification.
-
-### Changed
-- Product naming unified to `Voodoo Loader`.
-- Menu layout standardized: File / Downloads / View / Settings / Help.
-- Start-path reliability hardening for download options creation.
+- Stabilized visual snapshot tests for the `Download queue` block.
+- Improved accessibility for resize handles with visible keyboard focus.
+- Updated queue layout spacing, column alignment, and footer metrics presentation.
+- Unified release policy on `master` to stable SemVer versions only.
 
 ### Fixed
-- Portable startup relative-import crash.
-- Queue drag-and-drop instability (row disappearance, source mismatch, reorder corruption).
-- Queue readability in dark theme.
-- Sound playback reliability in portable runtime.
-- Select-column redundant text in queue rows (checkbox-only cells).
 
-### Known Issues
-- Update repository must be configured (`VOODOO_LOADER_GITHUB_REPOSITORY` env var or `update_repository` in settings) before in-app updater can query releases.
-- GitHub API rate-limits can temporarily block update checks.
+- Flaky Playwright snapshots in queue section due to layout jitter.
+- Teardown resize callback behavior that could trigger unnecessary state updates.
+- Version policy mismatch on `master` (`alpha` version replaced with stable release).
+
+## [0.2.0-alpha.1] - 2026-03-29
+
+### Added
+
+- Initial Tauri v2 migration implementation with React + TypeScript frontend.
+- FSD-based project structure for pages/widgets/entities/shared.
+- Storybook, Jest, Playwright, and pre-commit/pre-push quality gates.
+
+## [0.1.0-alpha] - 2026-03-28
+
+### Added
+
+- Early application functionality and UI foundation.
+- Basic queue operations and settings dialogs.
+

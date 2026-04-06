@@ -1,25 +1,68 @@
 # Voodoo Loader
 
-Репозиторий переведен в режим **replatform на Tauri v2**.
+Voodoo Loader is a cross-platform desktop download manager built with Tauri v2, React 19, and TypeScript.
 
-## Текущее состояние
+## What It Does
 
-- Legacy-реализация (Python/PySide6) архивирована в:
-  - `.archive/voodoo-loader-legacy-20260328-202314.zip`
-- Рабочая кодовая база для миграции:
-  - `VoodooLoader.Tauri/`
-- Контекст/требования сохранены в markdown-документах (`PRD.md`, `SESSION_CONTEXT.md`, и т.д.).
+- Adds direct links to a queue and runs downloads through aria2.
+- Supports queue controls: start, pause, stop, retry, remove, priority.
+- Supports drag-and-drop reorder for queue rows.
+- Shows progress, speed, ETA, and logs in one desktop UI.
+- Provides settings for authentication and aria2 behavior.
 
-## Что читать в первую очередь
+## Tech Stack
 
-- `docs/TAURI_V2_MIGRATION_PLAN_RU.md` — целевая архитектура и этапы миграции.
-- `PRD.md` — продуктовые требования.
-- `CONTRIBUTING.md` — git-процесс и правила PR.
+- Tauri v2 (Rust backend + desktop shell)
+- React 19 + TypeScript
+- Webpack
+- Redux Toolkit
+- Playwright, Jest, React Testing Library, Storybook
 
-## Веточная стратегия
+## Project Layout
 
-- `master` — только стабильные релизы.
-- `development` — интеграционная ветка.
-- `feature/*` — рабочие фича-ветки от `development`.
+- App source: `VoodooLoader.Tauri/`
+- Rust backend: `VoodooLoader.Tauri/src-tauri/`
+- E2E tests: `VoodooLoader.Tauri/tests/e2e/`
 
-Детали: см. `CONTRIBUTING.md`.
+## Run Locally
+
+Prerequisites:
+
+- Node.js 22+
+- Rust toolchain
+- Tauri prerequisites for your OS
+
+Commands:
+
+```bash
+cd VoodooLoader.Tauri
+npm ci
+npm run tauri dev
+```
+
+## Build
+
+Production build:
+
+```bash
+cd VoodooLoader.Tauri
+npm run build
+```
+
+Portable build (Windows local script):
+
+```bash
+cd VoodooLoader.Tauri
+npm run release:portable
+```
+
+## Quality Checks
+
+```bash
+cd VoodooLoader.Tauri
+npm run lint
+npm run typecheck
+npm run test
+npm run e2e:visual
+```
+
