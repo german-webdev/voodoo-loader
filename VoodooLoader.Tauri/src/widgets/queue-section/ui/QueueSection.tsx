@@ -46,6 +46,7 @@ export function QueueSection({
     minHeight: number;
     maxHeight: number;
   } | null>(null);
+  const resizeListenersAbortRef = useRef<AbortController | null>(null);
 
   const readRootCssPixels = useCallback((variable: string, fallback: number): number => {
     const raw = getComputedStyle(document.documentElement).getPropertyValue(variable).trim();
@@ -66,13 +67,26 @@ export function QueueSection({
     panel.style.setProperty("--queue-panel-height", `${nextHeight}px`);
   }, [queuePanelRef]);
 
-  const stopPanelResize = useCallback(() => {
-    resizeStateRef.current = null;
-    window.removeEventListener("pointermove", onPanelResizeMove);
-    window.removeEventListener("pointerup", stopPanelResize);
-    window.removeEventListener("pointercancel", stopPanelResize);
-    onUpdatePanelHeights();
-  }, [onPanelResizeMove, onUpdatePanelHeights]);
+  const detachResizeListeners = useCallback(() => {
+    resizeListenersAbortRef.current?.abort();
+    resizeListenersAbortRef.current = null;
+  }, []);
+
+  const finishPanelResize = useCallback(
+    (commitHeight: boolean) => {
+      const wasResizing = resizeStateRef.current !== null;
+      resizeStateRef.current = null;
+      detachResizeListeners();
+      if (commitHeight && wasResizing) {
+        onUpdatePanelHeights();
+      }
+    },
+    [detachResizeListeners, onUpdatePanelHeights],
+  );
+
+  const onPanelResizeCommit = useCallback(() => {
+    finishPanelResize(true);
+  }, [finishPanelResize]);
 
   const onPanelResizeStart = useCallback(
     (event: React.PointerEvent<HTMLButtonElement>) => {
@@ -94,14 +108,21 @@ export function QueueSection({
         maxHeight,
       };
 
-      window.addEventListener("pointermove", onPanelResizeMove);
-      window.addEventListener("pointerup", stopPanelResize);
-      window.addEventListener("pointercancel", stopPanelResize);
+      detachResizeListeners();
+      const listenersController = new AbortController();
+      resizeListenersAbortRef.current = listenersController;
+      window.addEventListener("pointermove", onPanelResizeMove, { signal: listenersController.signal });
+      window.addEventListener("pointerup", onPanelResizeCommit, { signal: listenersController.signal });
+      window.addEventListener("pointercancel", onPanelResizeCommit, { signal: listenersController.signal });
     },
-    [onPanelResizeMove, queuePanelRef, readRootCssPixels, stopPanelResize],
+    [detachResizeListeners, onPanelResizeCommit, onPanelResizeMove, queuePanelRef, readRootCssPixels],
   );
 
-  useEffect(() => stopPanelResize, [stopPanelResize]);
+  useEffect(() => {
+    return () => {
+      finishPanelResize(false);
+    };
+  }, [finishPanelResize]);
 
   return (
     <section className={styles.queueCard} onContextMenu={onQueueContextMenu}>

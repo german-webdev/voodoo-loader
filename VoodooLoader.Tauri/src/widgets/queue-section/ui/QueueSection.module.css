@@ -87,5 +87,6 @@
 
 .resizeEdgeHandle:focus-visible,
 .resizeCornerHandle:focus-visible {
-  outline: var(--border-none);
+  outline: var(--border-thin) solid var(--color-button-primary-border);
+  outline-offset: var(--space-2);
 }

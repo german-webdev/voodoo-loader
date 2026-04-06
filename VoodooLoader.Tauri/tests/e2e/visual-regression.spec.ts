@@ -234,8 +234,15 @@ async function blockByHeading(page: Page, headingText: string): Promise<Locator>
   return heading.locator("xpath=ancestor::section[1]");
 }
 
-async function waitForStableLayout(locator: Locator) {
-  await locator.evaluate(async (element) => {
+interface LayoutStabilityResult {
+  stable: boolean;
+  size: string;
+  stableFrames: number;
+  attempts: number;
+}
+
+async function waitForStableLayout(locator: Locator): Promise<LayoutStabilityResult> {
+  return locator.evaluate(async (element) => {
     const readSize = () => {
       const box = element.getBoundingClientRect();
       return `${Math.round(box.width)}x${Math.round(box.height)}`;
@@ -243,26 +250,34 @@ async function waitForStableLayout(locator: Locator) {
 
     let previous = readSize();
     let stableFrames = 0;
+    let attempts = 0;
     for (let attempt = 0; attempt < 30; attempt += 1) {
+      attempts = attempt + 1;
       await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
       const current = readSize();
       if (current === previous) {
         stableFrames += 1;
         if (stableFrames >= 4) {
-          return;
+          return { stable: true, size: current, stableFrames, attempts };
         }
       } else {
         stableFrames = 0;
         previous = current;
       }
     }
+
+    return { stable: false, size: previous, stableFrames, attempts };
   });
 }
 
 async function snapshot(locator: Locator, name: string, options?: { settle?: boolean }) {
   if (options?.settle) {
     await expect(locator).toBeVisible();
-    await waitForStableLayout(locator);
+    const stability = await waitForStableLayout(locator);
+    expect(
+      stability.stable,
+      `Layout did not stabilize for ${name}; size=${stability.size}, stableFrames=${stability.stableFrames}, attempts=${stability.attempts}`,
+    ).toBeTruthy();
     await locator.page().waitForTimeout(120);
   }
   await expect(locator).toHaveScreenshot(name, screenshotOptions);

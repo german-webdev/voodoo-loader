@@ -310,7 +310,7 @@ textarea {
 
 @media (max-width: 1180px) {
   :root {
-    --size-layout-max: 1120px;
+    --size-layout-max: 940px;
     --size-menu-link-min-width: 72px;
     --space-menu-gap: var(--space-8);
     --space-menu-link-inline: var(--space-8);
