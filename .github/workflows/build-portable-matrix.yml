@@ -145,9 +145,10 @@ EOF
           if-no-files-found: error
 
       - name: Publish asset to GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.meta.outputs.tag }}
-          files: releases/${{ steps.meta.outputs.artifact_base }}.${{ matrix.portable_ext }}
-          fail_on_unmatched_files: true
-          overwrite_files: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ steps.meta.outputs.tag }}" \
+            "releases/${{ steps.meta.outputs.artifact_base }}.${{ matrix.portable_ext }}" \
+            --clobber \
+            --repo "${{ github.repository }}"
