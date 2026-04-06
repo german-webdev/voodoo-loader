@@ -6,6 +6,9 @@ on:
     branches:
       - master
 
+permissions:
+  contents: write
+
 jobs:
   build-portable:
     name: Portable (${{ matrix.label }})
@@ -75,9 +78,11 @@ jobs:
           VERSION=$(node -p "require('./package.json').version")
           SHORT_SHA=$(git rev-parse --short HEAD)
           ARTIFACT_BASE="VoodooLoader-${VERSION}-${SHORT_SHA}-${{ matrix.label }}-portable"
+          TAG="v${VERSION}"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
           echo "artifact_base=${ARTIFACT_BASE}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
 
       - name: Package Windows portable
         if: runner.os == 'Windows'
@@ -138,3 +143,11 @@ EOF
           path: |
             releases/${{ steps.meta.outputs.artifact_base }}.${{ matrix.portable_ext }}
           if-no-files-found: error
+
+      - name: Publish asset to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          files: releases/${{ steps.meta.outputs.artifact_base }}.${{ matrix.portable_ext }}
+          fail_on_unmatched_files: true
+          overwrite_files: true
