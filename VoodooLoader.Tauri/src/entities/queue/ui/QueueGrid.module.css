@@ -22,9 +22,8 @@
   position: relative;
   width: max-content;
   min-width: var(--size-full);
-  min-height: var(--size-full);
-  display: grid;
-  grid-template-rows: auto auto;
+  min-height: max-content;
+  display: block;
 }
 
 .gridHead,
@@ -38,7 +37,7 @@
 .gridHead {
   position: sticky;
   top: var(--space-zero);
-  z-index: var(--z-popup);
+  z-index: var(--z-grid-head);
   background: var(--color-table-header-bg);
   color: var(--color-table-header-text);
   border-bottom: var(--border-thin) solid var(--color-table-border);
@@ -63,12 +62,14 @@
 }
 
 .gridBody {
+  display: block;
   min-height: var(--size-zero);
   overflow: visible;
 }
 
 .gridRow {
   min-height: var(--size-grid-row-height);
+  height: var(--size-grid-row-height);
   padding-inline-start: var(--space-grid-row-inline);
   padding-inline-end: var(--space-grid-row-inline);
   padding-block: var(--space-grid-row-block);

@@ -179,6 +179,7 @@
   --offset-icon-remove-y: var(--space-zero);
 
   --z-topbar: 90;
+  --z-grid-head: 60;
   --z-popup: 120;
   --z-context-menu: 220;
   --z-submenu: 240;

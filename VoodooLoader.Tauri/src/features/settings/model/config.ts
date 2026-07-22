@@ -1,7 +1,7 @@
 import type { QueueSnapshot, SettingsState } from "../../../entities/queue/model/types";
 
 export const EMPTY_SNAPSHOT: QueueSnapshot = { isRunning: false, items: [], logs: [] };
-export const DEFAULT_DESTINATION = "C:\\Downloads\\VoodooLoader";
+export const DEFAULT_DESTINATION = "";
 export const SETTINGS_KEY = "voodoo-loader-ui-settings-v2";
 
 export const DEFAULT_SETTINGS: SettingsState = {

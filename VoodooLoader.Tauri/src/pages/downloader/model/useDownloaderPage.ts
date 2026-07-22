@@ -1,7 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { join } from "@tauri-apps/api/path";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { openPath, revealItemInDir } from "@tauri-apps/plugin-opener";
+import { openPath } from "@tauri-apps/plugin-opener";
 import { useEffect, useMemo, useRef } from "react";
 import type * as React from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -11,7 +12,6 @@ import {
   applyPreset,
 } from "../../../features/settings/model/config";
 import { formatMb, parseSizeToMb, clampNonNegative } from "../../../shared/lib/numbers";
-import { joinWindowsPath } from "../../../shared/lib/paths";
 import { downloaderActions, type DownloaderState } from "./store/downloaderSlice";
 import type {
   ContextMenuState,
@@ -104,6 +104,29 @@ function resolveStateAction<T>(valueOrUpdater: React.SetStateAction<T>, current:
   return valueOrUpdater;
 }
 
+function normalizePathForCompare(value: string): string {
+  return value.trim().replace(/[\\/]+$/g, "").replace(/\//g, "\\").toLowerCase();
+}
+
+function isLegacyDefaultDestination(value: string): boolean {
+  const normalized = normalizePathForCompare(value);
+  if (normalized === "c:\\downloads\\voodooloader") {
+    return true;
+  }
+
+  return (
+    normalized.includes("\\src-tauri\\target\\debug\\downloads") ||
+    normalized.includes("\\src-tauri\\target\\release\\downloads")
+  );
+}
+
+function sanitizeFileNameForOpen(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  const segments = trimmed.split(/[\\/]+/).filter(Boolean);
+  return segments.length > 0 ? segments[segments.length - 1] : "";
+}
+
 export function useDownloaderPage(): DownloaderPageController {
   const dispatch = useDispatch();
   const state = useSelector((rootState: { downloader: DownloaderState }) => rootState.downloader);
@@ -177,30 +200,57 @@ export function useDownloaderPage(): DownloaderPageController {
   };
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(SETTINGS_KEY);
-      if (!raw) return;
+    let isMounted = true;
 
-      const stored = JSON.parse(raw) as Partial<PersistedUiSettings>;
+    async function bootstrapDestination() {
+      let storedDestination = "";
+      try {
+        const raw = localStorage.getItem(SETTINGS_KEY);
+        if (raw) {
+          const stored = JSON.parse(raw) as Partial<PersistedUiSettings>;
+          storedDestination = stored.destination?.trim() ?? "";
+          if (typeof stored.showLogs === "boolean")
+            dispatch(downloaderActions.setShowLogs(stored.showLogs));
+          if (typeof stored.showProgressDetails === "boolean") {
+            dispatch(downloaderActions.setShowProgressDetails(stored.showProgressDetails));
+          }
+          if (typeof stored.queuePanelHeight === "number") {
+            dispatch(downloaderActions.setQueuePanelHeight(Math.max(160, stored.queuePanelHeight)));
+          }
+          if (typeof stored.logsPanelHeight === "number") {
+            dispatch(downloaderActions.setLogsPanelHeight(Math.max(90, stored.logsPanelHeight)));
+          }
+          if (stored.settings) {
+            dispatch(downloaderActions.setSettings({ ...DEFAULT_SETTINGS, ...stored.settings }));
+          }
+        }
+      } catch {
+        // Ignore malformed storage.
+      }
 
-      if (stored.destination) dispatch(downloaderActions.setDestination(stored.destination));
-      if (typeof stored.showLogs === "boolean")
-        dispatch(downloaderActions.setShowLogs(stored.showLogs));
-      if (typeof stored.showProgressDetails === "boolean") {
-        dispatch(downloaderActions.setShowProgressDetails(stored.showProgressDetails));
+      try {
+        const defaultDestination = await invoke<string>("default_download_destination");
+        if (!isMounted) return;
+
+        const shouldUseDefault =
+          !storedDestination || isLegacyDefaultDestination(storedDestination);
+
+        dispatch(
+          downloaderActions.setDestination(shouldUseDefault ? defaultDestination : storedDestination),
+        );
+      } catch {
+        if (!isMounted) return;
+        if (storedDestination) {
+          dispatch(downloaderActions.setDestination(storedDestination));
+        }
       }
-      if (typeof stored.queuePanelHeight === "number") {
-        dispatch(downloaderActions.setQueuePanelHeight(Math.max(160, stored.queuePanelHeight)));
-      }
-      if (typeof stored.logsPanelHeight === "number") {
-        dispatch(downloaderActions.setLogsPanelHeight(Math.max(90, stored.logsPanelHeight)));
-      }
-      if (stored.settings) {
-        dispatch(downloaderActions.setSettings({ ...DEFAULT_SETTINGS, ...stored.settings }));
-      }
-    } catch {
-      // Ignore malformed storage.
     }
+
+    void bootstrapDestination();
+
+    return () => {
+      isMounted = false;
+    };
   }, [dispatch]);
 
   useEffect(() => {
@@ -461,6 +511,7 @@ export function useDownloaderPage(): DownloaderPageController {
     await runAction(async () => {
       const next = await invoke<QueueSnapshot>("start_queue", {
         maxSimultaneousDownloads: settings.maxSimultaneousDownloads,
+        userAgent: settings.userAgent.trim() || "Mozilla/5.0",
       });
       dispatch(downloaderActions.setSnapshot(next));
     });
@@ -590,19 +641,27 @@ export function useDownloaderPage(): DownloaderPageController {
     }
 
     await runAction(async () => {
-      await openPath(joinWindowsPath(target.destination, target.fileName));
+      const normalizedFileName =
+        sanitizeFileNameForOpen(target.fileName) || sanitizeFileNameForOpen(target.url);
+      if (!normalizedFileName) {
+        throw new Error("Cannot resolve file name for selected item.");
+      }
+      const targetFilePath = await join(target.destination, normalizedFileName);
+      await openPath(targetFilePath);
     });
   }
 
   async function openSelectedFolder() {
-    const target = snapshot.items.find((item) => item.selected) ?? snapshot.items[0];
+    const target =
+      snapshot.items.find((item) => item.selected && item.status.toLowerCase() === "completed") ??
+      snapshot.items.find((item) => item.status.toLowerCase() === "completed");
     if (!target) {
-      dispatch(downloaderActions.setActionError("No queue item available."));
+      dispatch(downloaderActions.setActionError("No completed item available."));
       return;
     }
 
     await runAction(async () => {
-      await revealItemInDir(target.destination);
+      await openPath(target.destination);
     });
   }
 

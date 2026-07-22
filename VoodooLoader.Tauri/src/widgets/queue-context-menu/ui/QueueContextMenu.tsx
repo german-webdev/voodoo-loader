@@ -39,6 +39,9 @@ export function QueueContextMenu({
       style={
         { "--context-menu-left": `${x}px`, "--context-menu-top": `${y}px` } as React.CSSProperties
       }
+      onPointerDown={(event) => {
+        event.stopPropagation();
+      }}
     >
       <Button type="button" onClick={() => void onRetrySelected().finally(onClose)}>
         Retry selected

@@ -1,11 +1,18 @@
-use serde::{Deserialize, Serialize};
 use rfd::FileDialog;
+use serde::{Deserialize, Serialize};
+use std::any::Any;
+use std::collections::HashSet;
+use std::fs::{self, OpenOptions};
+use std::io::{Read, Write};
+use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::thread;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, State};
 
 const QUEUE_SNAPSHOT_EVENT: &str = "queue://snapshot";
+const DEFAULT_DOWNLOAD_USER_AGENT: &str = "Mozilla/5.0";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -23,6 +30,8 @@ struct QueueItem {
     priority: String,
     attempts: u32,
     created_order: u64,
+    #[serde(skip)]
+    restart_from_zero: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -52,6 +61,7 @@ struct QueueRuntime {
     ticker_active: bool,
     is_running: bool,
     max_simultaneous_downloads: u32,
+    download_user_agent: String,
     items: Vec<QueueItem>,
     logs: Vec<LogEntry>,
 }
@@ -116,8 +126,24 @@ fn file_name_from_url(url: &str) -> String {
     "download.bin".to_string()
 }
 
-fn simulated_total_size_mb(seed: u64) -> u64 {
-    256 + (seed % 12) * 128
+fn normalize_url(url: &str) -> Result<String, String> {
+    let trimmed = url.trim();
+    if trimmed.is_empty() {
+        return Err("URL cannot be empty".to_string());
+    }
+
+    if reqwest::Url::parse(trimmed).is_ok() {
+        return Ok(trimmed.to_string());
+    }
+
+    if !trimmed.contains("://") {
+        let with_https = format!("https://{trimmed}");
+        if reqwest::Url::parse(&with_https).is_ok() {
+            return Ok(with_https);
+        }
+    }
+
+    Err(format!("Invalid URL: {trimmed}"))
 }
 
 fn format_total_size(mb: u64) -> String {
@@ -126,6 +152,238 @@ fn format_total_size(mb: u64) -> String {
     } else {
         format!("{mb} MB")
     }
+}
+
+fn format_total_size_from_bytes(bytes: u64) -> String {
+    let mb = bytes / (1024_u64 * 1024_u64);
+    let rounded_mb = if bytes > 0 && mb == 0 { 1 } else { mb };
+    format_total_size(rounded_mb)
+}
+
+fn format_speed_mb_per_sec(bytes: u64, elapsed: Duration) -> String {
+    if elapsed.is_zero() {
+        return "0 MB/s".to_string();
+    }
+    let mb_per_sec = (bytes as f64) / (1024_f64 * 1024_f64) / elapsed.as_secs_f64();
+    if mb_per_sec < 0.01 {
+        "0 MB/s".to_string()
+    } else {
+        format!("{mb_per_sec:.2} MB/s")
+    }
+}
+
+fn format_eta_from_seconds(seconds: f64) -> String {
+    if !seconds.is_finite() || seconds <= 0.0 {
+        return "--".to_string();
+    }
+    let secs = seconds.round() as u64;
+    let hours = secs / 3600;
+    let minutes = (secs % 3600) / 60;
+    let rem_secs = secs % 60;
+
+    if hours > 0 {
+        format!("{hours:02}:{minutes:02}:{rem_secs:02}")
+    } else {
+        format!("{minutes:02}:{rem_secs:02}")
+    }
+}
+
+fn normalize_file_name(file_name: &str) -> Result<String, String> {
+    let sanitized = Path::new(file_name.trim())
+        .file_name()
+        .and_then(|name| name.to_str())
+        .map(str::trim)
+        .filter(|name| !name.is_empty())
+        .ok_or_else(|| "resolved file name is empty".to_string())?;
+    Ok(sanitized.to_string())
+}
+
+fn default_download_destination_candidates() -> Vec<PathBuf> {
+    let mut candidates = Vec::<PathBuf>::new();
+    let mut seen = HashSet::<String>::new();
+
+    let mut push_candidate = |path: PathBuf| {
+        let key = path.to_string_lossy().trim().to_ascii_lowercase();
+        if !key.is_empty() && !seen.contains(&key) {
+            seen.insert(key);
+            candidates.push(path);
+        }
+    };
+
+    if let Some(system_downloads) = dirs::download_dir() {
+        push_candidate(system_downloads);
+    }
+
+    if let Ok(executable_path) = std::env::current_exe() {
+        if let Some(executable_dir) = executable_path.parent() {
+            push_candidate(executable_dir.join("Downloads"));
+        }
+    }
+
+    candidates
+}
+
+fn normalize_destination(destination: &str) -> Result<String, String> {
+    let trimmed = destination.trim();
+    if trimmed.is_empty() {
+        let mut last_error: Option<String> = None;
+        for candidate in default_download_destination_candidates() {
+            match fs::create_dir_all(&candidate) {
+                Ok(_) => {
+                    return Ok(candidate.to_string_lossy().to_string());
+                }
+                Err(error) => {
+                    last_error = Some(format!(
+                        "failed to create destination directory '{}': {error}",
+                        candidate.display()
+                    ));
+                }
+            }
+        }
+
+        return Err(last_error.unwrap_or_else(|| {
+            "failed to resolve default destination directory".to_string()
+        }));
+    }
+
+    let path = PathBuf::from(trimmed);
+    fs::create_dir_all(&path)
+        .map_err(|e| format!("failed to create destination directory '{}': {e}", path.display()))?;
+
+    Ok(path.to_string_lossy().to_string())
+}
+
+fn resolve_target_file_path(
+    destination: &str,
+    file_name: &str,
+) -> Result<(PathBuf, String, String), String> {
+    let normalized_destination = normalize_destination(destination)?;
+    let destination_path = PathBuf::from(&normalized_destination);
+    let normalized_file_name = normalize_file_name(file_name)?;
+    let target_path = destination_path.join(&normalized_file_name);
+    Ok((target_path, normalized_destination, normalized_file_name))
+}
+
+#[derive(Debug)]
+struct DownloadWriteResult {
+    bytes_written: u64,
+    normalized_destination: String,
+    normalized_file_name: String,
+}
+
+fn download_to_file(
+    url: &str,
+    destination: &str,
+    file_name: &str,
+    user_agent: &str,
+    force_restart: bool,
+    mut on_progress: impl FnMut(u64, Option<u64>, Duration) -> Result<(), String>,
+) -> Result<DownloadWriteResult, String> {
+    let normalized_url = normalize_url(url)?;
+    let (target_file_path, normalized_destination, normalized_file_name) =
+        resolve_target_file_path(destination, file_name)?;
+    let resolved_user_agent = if user_agent.trim().is_empty() {
+        DEFAULT_DOWNLOAD_USER_AGENT
+    } else {
+        user_agent.trim()
+    };
+    let client = reqwest::blocking::Client::builder()
+        .user_agent(resolved_user_agent)
+        .connect_timeout(Duration::from_secs(20))
+        .timeout(Duration::from_secs(900))
+        .redirect(reqwest::redirect::Policy::limited(10))
+        .build()
+        .map_err(|e| format!("failed to initialize HTTP client: {e}"))?;
+
+    let existing_size = if force_restart {
+        0
+    } else {
+        fs::metadata(&target_file_path)
+        .ok()
+        .map(|meta| meta.len())
+        .unwrap_or(0)
+    };
+    let mut request = client.get(normalized_url.clone());
+    if existing_size > 0 && !force_restart {
+        request = request.header(reqwest::header::RANGE, format!("bytes={existing_size}-"));
+    }
+
+    let mut response = request
+        .send()
+        .map_err(|e| format!("request error: {e}"))?;
+
+    if response.status() == reqwest::StatusCode::RANGE_NOT_SATISFIABLE && existing_size > 0 {
+        return Ok(DownloadWriteResult {
+            bytes_written: existing_size,
+            normalized_destination,
+            normalized_file_name,
+        });
+    }
+
+    if !response.status().is_success() {
+        return Err(format!("HTTP {}", response.status()));
+    }
+
+    let resumed = !force_restart
+        && existing_size > 0
+        && response.status() == reqwest::StatusCode::PARTIAL_CONTENT;
+    let mut file = if resumed {
+        OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&target_file_path)
+            .map_err(|e| format!("failed to append '{}': {e}", target_file_path.display()))?
+    } else {
+        fs::File::create(&target_file_path)
+            .map_err(|e| format!("failed to create '{}': {e}", target_file_path.display()))?
+    };
+
+    let response_len = response.content_length();
+    let expected_size = if resumed {
+        response_len.map(|rest| existing_size.saturating_add(rest))
+    } else {
+        response_len
+    };
+
+    let mut bytes_written: u64 = if resumed { existing_size } else { 0 };
+    let mut buffer = vec![0_u8; 1024 * 256];
+    let started_at = Instant::now();
+    let mut last_progress_emit = Instant::now();
+
+    loop {
+        let read_count = response
+            .read(&mut buffer)
+            .map_err(|e| format!("failed to read response body: {e}"))?;
+        if read_count == 0 {
+            break;
+        }
+
+        file.write_all(&buffer[..read_count])
+            .map_err(|e| format!("failed to write '{}': {e}", target_file_path.display()))?;
+        bytes_written = bytes_written.saturating_add(read_count as u64);
+
+        let now = Instant::now();
+        if now.duration_since(last_progress_emit) >= Duration::from_millis(240) {
+            on_progress(bytes_written, expected_size, started_at.elapsed())?;
+            last_progress_emit = now;
+        }
+    }
+
+    on_progress(bytes_written, expected_size, started_at.elapsed())?;
+
+    if let Some(expected_size) = expected_size {
+        if expected_size != bytes_written {
+            return Err(format!(
+                "incomplete download: expected {expected_size} bytes, received {bytes_written} bytes"
+            ));
+        }
+    }
+
+    Ok(DownloadWriteResult {
+        bytes_written,
+        normalized_destination,
+        normalized_file_name,
+    })
 }
 
 fn parse_url_lines(raw: &str) -> Vec<String> {
@@ -167,130 +425,289 @@ fn reset_item_for_retry(item: &mut QueueItem) {
     item.progress = 0.0;
     item.speed = "0 MB/s".to_string();
     item.eta = "--".to_string();
+    item.total_size = "unknown".to_string();
+    item.restart_from_zero = true;
 }
 
-fn run_queue_tick(runtime: &mut QueueRuntime) {
-    if runtime.items.is_empty() {
-        return;
-    }
+#[derive(Debug, Clone)]
+struct DownloadTask {
+    id: String,
+    url: String,
+    destination: String,
+    file_name: String,
+    user_agent: String,
+    force_restart: bool,
+}
 
+fn take_next_download_tasks(runtime: &mut QueueRuntime) -> Vec<DownloadTask> {
+    let active_downloading = runtime
+        .items
+        .iter()
+        .filter(|item| item.status.eq_ignore_ascii_case("downloading"))
+        .count();
     let max_active = if runtime.max_simultaneous_downloads == 0 {
         usize::MAX
     } else {
         runtime.max_simultaneous_downloads as usize
     };
-
-    let mut events: Vec<(String, String)> = Vec::new();
-
-    let mut downloading_count = runtime
-        .items
-        .iter()
-        .filter(|item| item.status.eq_ignore_ascii_case("downloading"))
-        .count();
-
-    if downloading_count < max_active {
-        for item in runtime.items.iter_mut() {
-            if downloading_count >= max_active {
-                break;
-            }
-            if item.status.eq_ignore_ascii_case("queued") {
-                item.status = "Downloading".to_string();
-                item.speed = "2.4 MB/s".to_string();
-                item.eta = "00:12".to_string();
-                downloading_count += 1;
-                events.push((
-                    "INFO".to_string(),
-                    format!("Started download: {}", item.file_name),
-                ));
-            }
-        }
+    if active_downloading >= max_active {
+        return Vec::new();
     }
 
+    let mut available_slots = max_active.saturating_sub(active_downloading);
+    let resolved_user_agent = if runtime.download_user_agent.trim().is_empty() {
+        DEFAULT_DOWNLOAD_USER_AGENT.to_string()
+    } else {
+        runtime.download_user_agent.trim().to_string()
+    };
+
+    let mut tasks = Vec::<DownloadTask>::new();
+    let mut started_messages = Vec::<String>::new();
     for item in runtime.items.iter_mut() {
-        if !item.status.eq_ignore_ascii_case("downloading") {
+        if available_slots == 0 {
+            break;
+        }
+        if !item.status.eq_ignore_ascii_case("queued") {
             continue;
         }
 
-        let dynamic_step = 5.0 + ((item.created_order % 6) as f32 * 1.9);
-        item.progress = (item.progress + dynamic_step).clamp(0.0, 100.0);
+        item.status = "Downloading".to_string();
+        item.speed = "0 MB/s".to_string();
+        item.eta = "--".to_string();
+        let force_restart = item.restart_from_zero;
+        item.restart_from_zero = false;
+        started_messages.push(format!("Started download: {}", item.file_name));
 
-        let should_fail_once =
-            item.progress >= 55.0 && item.attempts == 0 && item.id.ends_with('3');
-        if should_fail_once {
-            item.status = "Failed".to_string();
-            item.speed = "0 MB/s".to_string();
-            item.eta = "--".to_string();
-            item.attempts += 1;
-            events.push((
-                "ERROR".to_string(),
-                format!("Failed: {} (simulated timeout)", item.file_name),
-            ));
-            continue;
-        }
-
-        if item.progress >= 100.0 {
-            item.progress = 100.0;
-            item.status = "Completed".to_string();
-            item.speed = "0 MB/s".to_string();
-            item.eta = "--".to_string();
-            events.push((
-                "SUCCESS".to_string(),
-                format!("Completed: {}", item.file_name),
-            ));
-            continue;
-        }
-
-        let speed_value = 1.4 + ((item.created_order % 7) as f32 * 0.35);
-        item.speed = format!("{speed_value:.1} MB/s");
+        tasks.push(DownloadTask {
+            id: item.id.clone(),
+            url: item.url.clone(),
+            destination: item.destination.clone(),
+            file_name: item.file_name.clone(),
+            user_agent: resolved_user_agent.clone(),
+            force_restart,
+        });
+        available_slots = available_slots.saturating_sub(1);
     }
 
-    for (level, message) in events {
-        push_log(runtime, &level, message);
+    for message in started_messages {
+        push_log(runtime, "INFO", message);
     }
+
+    tasks
+}
+
+fn finalize_queue_if_idle(runtime: &mut QueueRuntime) -> bool {
+    let has_active = runtime.items.iter().any(|it| is_active_status(&it.status));
+    if !has_active {
+        runtime.is_running = false;
+        runtime.ticker_active = false;
+        let has_failed = runtime
+            .items
+            .iter()
+            .any(|it| it.status.eq_ignore_ascii_case("failed"));
+        if has_failed {
+            push_log(
+                runtime,
+                "WARN",
+                "Queue stopped: some items failed".to_string(),
+            );
+        } else {
+            push_log(runtime, "INFO", "Queue finished".to_string());
+        }
+        return true;
+    }
+
+    false
+}
+
+fn apply_download_result(runtime: &mut QueueRuntime, task: &DownloadTask, result: Result<DownloadWriteResult, String>) {
+    let Some(index) = runtime.items.iter().position(|item| item.id == task.id) else {
+        push_log(
+            runtime,
+            "WARN",
+            format!("Download result ignored: item removed ({})", task.file_name),
+        );
+        return;
+    };
+
+    let item = &mut runtime.items[index];
+    let log_event: (&str, String);
+    if !item.status.eq_ignore_ascii_case("downloading") {
+        if let Err(error) = result {
+            if error == "download canceled" {
+                return;
+            }
+        }
+        log_event = (
+            "WARN",
+            format!("Download result ignored: item not downloading ({})", item.file_name),
+        );
+    } else {
+        match result {
+            Ok(result) => {
+                item.progress = 100.0;
+                item.status = "Completed".to_string();
+                item.speed = "0 MB/s".to_string();
+                item.eta = "--".to_string();
+                item.total_size = format_total_size_from_bytes(result.bytes_written);
+                item.destination = result.normalized_destination;
+                item.file_name = result.normalized_file_name;
+                log_event = ("SUCCESS", format!("Completed: {}", item.file_name));
+            }
+            Err(error) => {
+                item.status = "Failed".to_string();
+                item.speed = "0 MB/s".to_string();
+                item.eta = "--".to_string();
+                item.attempts += 1;
+                log_event = ("ERROR", format!("Failed: {} ({error})", item.file_name));
+            }
+        }
+    }
+
+    push_log(runtime, log_event.0, log_event.1);
+}
+
+fn panic_payload_to_string(payload: Box<dyn Any + Send>) -> String {
+    if let Some(message) = payload.downcast_ref::<&str>() {
+        return (*message).to_string();
+    }
+    if let Some(message) = payload.downcast_ref::<String>() {
+        return message.clone();
+    }
+    "unknown panic payload".to_string()
+}
+
+fn apply_download_progress(
+    runtime: &mut QueueRuntime,
+    task_id: &str,
+    downloaded_bytes: u64,
+    total_bytes: Option<u64>,
+    elapsed: Duration,
+) -> Result<Option<QueueSnapshot>, String> {
+    let Some(item) = runtime.items.iter_mut().find(|item| item.id == task_id) else {
+        return Err("task item missing from queue".to_string());
+    };
+
+    if !item.status.eq_ignore_ascii_case("downloading") {
+        return Err("download canceled".to_string());
+    }
+
+    item.speed = format_speed_mb_per_sec(downloaded_bytes, elapsed);
+    if let Some(total) = total_bytes {
+        item.total_size = format_total_size_from_bytes(total);
+        if total > 0 {
+            let progress = ((downloaded_bytes as f64 / total as f64) * 100.0).clamp(0.0, 99.9);
+            item.progress = progress as f32;
+            let elapsed_secs = elapsed.as_secs_f64();
+            if elapsed_secs > 0.0 && downloaded_bytes < total {
+                let bytes_per_sec = downloaded_bytes as f64 / elapsed_secs;
+                if bytes_per_sec > 0.0 {
+                    let remaining_secs = (total - downloaded_bytes) as f64 / bytes_per_sec;
+                    item.eta = format_eta_from_seconds(remaining_secs);
+                }
+            } else {
+                item.eta = "--".to_string();
+            }
+        }
+    }
+
+    Ok(Some(snapshot_from_runtime(runtime)))
+}
+
+fn spawn_single_download_task(app: AppHandle, store: Arc<QueueStore>, task: DownloadTask) {
+    thread::spawn(move || {
+        let app_for_progress = app.clone();
+        let store_for_progress = store.clone();
+        let task_for_progress = task.clone();
+
+        let download_result = match catch_unwind(AssertUnwindSafe(|| {
+            download_to_file(
+                &task.url,
+                &task.destination,
+                &task.file_name,
+                &task.user_agent,
+                task.force_restart,
+                |downloaded_bytes, total_bytes, elapsed| {
+                    let snapshot_to_emit = {
+                        let mut runtime = store_for_progress
+                            .runtime
+                            .lock()
+                            .unwrap_or_else(|poisoned| poisoned.into_inner());
+                        apply_download_progress(
+                            &mut runtime,
+                            &task_for_progress.id,
+                            downloaded_bytes,
+                            total_bytes,
+                            elapsed,
+                        )?
+                    };
+
+                    if let Some(snapshot) = snapshot_to_emit {
+                        let _ = emit_snapshot(&app_for_progress, &snapshot);
+                    }
+
+                    Ok(())
+                },
+            )
+        })) {
+            Ok(result) => result,
+            Err(payload) => Err(format!(
+                "internal panic during download: {}",
+                panic_payload_to_string(payload)
+            )),
+        };
+
+        let snapshot_after = {
+            let mut runtime = store
+                .runtime
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            apply_download_result(&mut runtime, &task, download_result);
+            snapshot_from_runtime(&runtime)
+        };
+
+        let _ = emit_snapshot(&app, &snapshot_after);
+    });
 }
 
 fn spawn_queue_worker(app: AppHandle, store: Arc<QueueStore>) {
     thread::spawn(move || loop {
-        thread::sleep(Duration::from_millis(900));
+        thread::sleep(Duration::from_millis(220));
 
-        let (snapshot, should_break) = {
+        let (snapshot_before, pending_tasks, should_break_before) = {
             let mut runtime = store
                 .runtime
                 .lock()
-                .expect("queue runtime mutex should not be poisoned");
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
 
             if !runtime.is_running {
-                runtime.ticker_active = false;
-                (snapshot_from_runtime(&runtime), true)
-            } else {
-                run_queue_tick(&mut runtime);
-                let has_active = runtime.items.iter().any(|it| is_active_status(&it.status));
-                if !has_active {
-                    runtime.is_running = false;
-                    runtime.ticker_active = false;
-                    let has_failed = runtime
-                        .items
-                        .iter()
-                        .any(|it| it.status.eq_ignore_ascii_case("failed"));
-                    if has_failed {
-                        push_log(
-                            &mut runtime,
-                            "WARN",
-                            "Queue stopped: some items failed".to_string(),
-                        );
-                    } else {
-                        push_log(&mut runtime, "INFO", "Queue finished".to_string());
-                    }
-                    (snapshot_from_runtime(&runtime), true)
+                let has_downloading = runtime
+                    .items
+                    .iter()
+                    .any(|item| item.status.eq_ignore_ascii_case("downloading"));
+                if has_downloading {
+                    (snapshot_from_runtime(&runtime), Vec::new(), false)
                 } else {
-                    (snapshot_from_runtime(&runtime), false)
+                    runtime.ticker_active = false;
+                    (snapshot_from_runtime(&runtime), Vec::new(), true)
+                }
+            } else {
+                let tasks = take_next_download_tasks(&mut runtime);
+                if tasks.is_empty() && finalize_queue_if_idle(&mut runtime) {
+                    (snapshot_from_runtime(&runtime), Vec::new(), true)
+                } else {
+                    (snapshot_from_runtime(&runtime), tasks, false)
                 }
             }
         };
 
-        let _ = emit_snapshot(&app, &snapshot);
-        if should_break {
+        let _ = emit_snapshot(&app, &snapshot_before);
+        if should_break_before {
             break;
+        }
+
+        for task in pending_tasks {
+            spawn_single_download_task(app.clone(), store.clone(), task);
         }
     });
 }
@@ -344,7 +761,7 @@ fn queue_snapshot(state: State<'_, Arc<QueueStore>>) -> QueueSnapshot {
     let runtime = state
         .runtime
         .lock()
-        .expect("queue runtime mutex should not be poisoned");
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
     snapshot_from_runtime(&runtime)
 }
 
@@ -356,9 +773,8 @@ fn add_queue_item(
     destination: String,
     file_name: Option<String>,
 ) -> Result<QueueSnapshot, String> {
-    if url.trim().is_empty() {
-        return Err("URL cannot be empty".to_string());
-    }
+    let normalized_url = normalize_url(&url)?;
+    let normalized_destination = normalize_destination(&destination)?;
 
     let snapshot = {
         let mut runtime = state
@@ -368,27 +784,29 @@ fn add_queue_item(
 
         runtime.next_id += 1;
         let next_id = runtime.next_id;
-        let total_size = format_total_size(simulated_total_size_mb(next_id));
-        let resolved_file_name = file_name
+        let raw_file_name = file_name
             .as_deref()
             .filter(|value| !value.trim().is_empty())
             .map(|v| v.trim().to_string())
-            .unwrap_or_else(|| file_name_from_url(&url));
+            .unwrap_or_else(|| file_name_from_url(&normalized_url));
+        let resolved_file_name = normalize_file_name(&raw_file_name)
+            .unwrap_or_else(|_| file_name_from_url(&normalized_url));
 
         runtime.items.push(QueueItem {
             id: format!("q-{0:06}", next_id),
             selected: false,
             file_name: resolved_file_name.clone(),
-            url: url.trim().to_string(),
-            destination: destination.trim().to_string(),
+            url: normalized_url.clone(),
+            destination: normalized_destination.clone(),
             status: "Queued".to_string(),
             progress: 0.0,
             speed: "0 MB/s".to_string(),
             eta: "--".to_string(),
-            total_size,
+            total_size: "unknown".to_string(),
             priority: "Medium".to_string(),
             attempts: 0,
             created_order: next_id,
+            restart_from_zero: false,
         });
 
         push_log(
@@ -410,10 +828,24 @@ fn add_queue_items_from_text(
     text: String,
     destination: String,
 ) -> Result<QueueSnapshot, String> {
-    let urls = parse_url_lines(&text);
-    if urls.is_empty() {
+    let parsed_urls = parse_url_lines(&text);
+    if parsed_urls.is_empty() {
         return Err("No valid URLs found in input text".to_string());
     }
+
+    let parsed_count = parsed_urls.len();
+    let mut normalized_urls = Vec::<String>::new();
+    for raw_url in parsed_urls {
+        if let Ok(normalized_url) = normalize_url(&raw_url) {
+            normalized_urls.push(normalized_url);
+        }
+    }
+
+    if normalized_urls.is_empty() {
+        return Err("No valid URLs found in input text".to_string());
+    }
+
+    let normalized_destination = normalize_destination(&destination)?;
 
     let snapshot = {
         let mut runtime = state
@@ -421,32 +853,42 @@ fn add_queue_items_from_text(
             .lock()
             .map_err(|_| "queue runtime lock failed".to_string())?;
 
-        for url in urls.iter() {
+        for url in normalized_urls.iter() {
             runtime.next_id += 1;
             let next_id = runtime.next_id;
-            let total_size = format_total_size(simulated_total_size_mb(next_id));
+            let resolved_file_name =
+                normalize_file_name(&file_name_from_url(url)).unwrap_or_else(|_| "download.bin".to_string());
             runtime.items.push(QueueItem {
                 id: format!("q-{0:06}", next_id),
                 selected: false,
-                file_name: file_name_from_url(url),
+                file_name: resolved_file_name,
                 url: url.clone(),
-                destination: destination.trim().to_string(),
+                destination: normalized_destination.clone(),
                 status: "Queued".to_string(),
                 progress: 0.0,
                 speed: "0 MB/s".to_string(),
                 eta: "--".to_string(),
-                total_size,
+                total_size: "unknown".to_string(),
                 priority: "Medium".to_string(),
                 attempts: 0,
                 created_order: next_id,
+                restart_from_zero: false,
             });
         }
 
         push_log(
             &mut runtime,
             "INFO",
-            format!("Imported {} URL(s) from text", urls.len()),
+            format!("Imported {} URL(s) from text", normalized_urls.len()),
         );
+        let skipped = parsed_count.saturating_sub(normalized_urls.len());
+        if skipped > 0 {
+            push_log(
+                &mut runtime,
+                "WARN",
+                format!("Skipped {skipped} invalid URL(s) during import"),
+            );
+        }
         snapshot_from_runtime(&runtime)
     };
 
@@ -939,6 +1381,7 @@ fn start_queue(
     app: AppHandle,
     state: State<'_, Arc<QueueStore>>,
     max_simultaneous_downloads: Option<u32>,
+    user_agent: Option<String>,
 ) -> Result<QueueSnapshot, String> {
     let should_spawn = {
         let mut runtime = state
@@ -948,6 +1391,12 @@ fn start_queue(
 
         if let Some(max) = max_simultaneous_downloads {
             runtime.max_simultaneous_downloads = max;
+        }
+        if let Some(agent) = user_agent {
+            runtime.download_user_agent = agent.trim().to_string();
+        }
+        if runtime.download_user_agent.trim().is_empty() {
+            runtime.download_user_agent = DEFAULT_DOWNLOAD_USER_AGENT.to_string();
         }
 
         if runtime.items.is_empty() {
@@ -1006,10 +1455,19 @@ fn pause_queue(
 
         if runtime.is_running {
             runtime.is_running = false;
+            let mut paused = 0usize;
+            for item in runtime.items.iter_mut() {
+                if item.status.eq_ignore_ascii_case("downloading") {
+                    item.status = "Queued".to_string();
+                    item.speed = "0 MB/s".to_string();
+                    item.eta = "--".to_string();
+                    paused += 1;
+                }
+            }
             push_log(
                 &mut runtime,
                 "INFO",
-                "Queue paused (resume with Start)".to_string(),
+                format!("Queue paused (resume with Start), paused {paused} active item(s)"),
             );
         } else {
             push_log(
@@ -1035,21 +1493,26 @@ fn stop_queue(app: AppHandle, state: State<'_, Arc<QueueStore>>) -> Result<Queue
             .map_err(|_| "queue runtime lock failed".to_string())?;
         runtime.is_running = false;
 
-        let mut canceled = 0usize;
+        let mut reset_count = 0usize;
         for item in runtime.items.iter_mut() {
-            if is_active_status(&item.status) {
-                item.status = "Canceled".to_string();
+            if item.status.eq_ignore_ascii_case("downloading")
+                || item.status.eq_ignore_ascii_case("queued")
+            {
+                item.status = "Queued".to_string();
+                item.progress = 0.0;
                 item.speed = "0 MB/s".to_string();
                 item.eta = "--".to_string();
-                canceled += 1;
+                item.total_size = "unknown".to_string();
+                item.restart_from_zero = true;
+                reset_count += 1;
             }
         }
 
-        if canceled > 0 {
+        if reset_count > 0 {
             push_log(
                 &mut runtime,
-                "WARN",
-                format!("Queue stopped: canceled {canceled} active item(s)"),
+                "INFO",
+                format!("Queue stopped: reset {reset_count} queued/downloading item(s)"),
             );
         } else {
             push_log(&mut runtime, "INFO", "Queue stopped".to_string());
@@ -1110,6 +1573,11 @@ fn pick_file() -> Option<String> {
         .add_filter("Executable", &["exe"])
         .pick_file()
         .map(|path| path.display().to_string())
+}
+
+#[tauri::command]
+fn default_download_destination() -> Result<String, String> {
+    normalize_destination("")
 }
 
 #[tauri::command]
@@ -1219,6 +1687,7 @@ pub fn run() {
             stop_queue,
             clear_logs,
             clear_queue,
+            default_download_destination,
             pick_folder,
             pick_file,
             build_preview_command
@@ -1270,6 +1739,18 @@ mod tests {
     }
 
     #[test]
+    fn normalize_url_adds_https_when_scheme_missing() {
+        let normalized = normalize_url("example.com/file.bin").expect("url should normalize");
+        assert_eq!(normalized, "https://example.com/file.bin");
+    }
+
+    #[test]
+    fn normalize_url_rejects_invalid_value() {
+        let result = normalize_url("://broken-url");
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn build_preview_command_masks_sensitive_token() {
         let input = PreviewCommandInput {
             url: "https://example.com/archive.zip".to_string(),
@@ -1311,6 +1792,7 @@ mod tests {
                 priority: "Medium".to_string(),
                 attempts: 0,
                 created_order: 1,
+                restart_from_zero: false,
             },
             QueueItem {
                 id: "q-2".to_string(),
@@ -1326,6 +1808,7 @@ mod tests {
                 priority: "Medium".to_string(),
                 attempts: 0,
                 created_order: 2,
+                restart_from_zero: false,
             },
             QueueItem {
                 id: "q-3".to_string(),
@@ -1341,6 +1824,7 @@ mod tests {
                 priority: "Medium".to_string(),
                 attempts: 0,
                 created_order: 3,
+                restart_from_zero: false,
             },
             QueueItem {
                 id: "q-4".to_string(),
@@ -1356,6 +1840,7 @@ mod tests {
                 priority: "Medium".to_string(),
                 attempts: 0,
                 created_order: 4,
+                restart_from_zero: false,
             },
         ];
 
